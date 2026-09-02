@@ -4,11 +4,16 @@
   "description": "n8n community node for Zentria: signed webhooks plus the public team API.",
   "license": "MIT",
   "homepage": "https://github.com/vitrionbv/n8n-nodes-zentria",
-  "keywords": ["n8n-community-node-package"],
-  "author": { "name": "Vitrion", "email": "hello@vitrion.nl" },
+  "keywords": [
+    "n8n-community-node-package"
+  ],
+  "author": {
+    "name": "Vitrion",
+    "email": "hello@vitrion.nl"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/vitrionbv/n8n-nodes-zentria.git"
+    "url": "git+https://github.com/vitrionbv/n8n-nodes-zentria.git"
   },
   "scripts": {
     "build": "n8n-node build",
@@ -19,11 +24,15 @@
     "release": "n8n-node release",
     "prepublishOnly": "n8n-node prerelease"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "n8n": {
     "n8nNodesApiVersion": 1,
     "strict": true,
-    "credentials": ["dist/credentials/ZentriaApi.credentials.js"],
+    "credentials": [
+      "dist/credentials/ZentriaApi.credentials.js"
+    ],
     "nodes": [
       "dist/nodes/Zentria/Zentria.node.js",
       "dist/nodes/Zentria/ZentriaTrigger.node.js"
@@ -37,6 +46,10 @@
     "release-it": "20.2.0",
     "typescript": "5.9.3"
   },
-  "peerDependencies": { "n8n-workflow": "*" },
-  "publishConfig": { "access": "public" }
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

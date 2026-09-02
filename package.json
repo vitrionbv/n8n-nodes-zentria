@@ -37,5 +37,6 @@
     "release-it": "20.2.0",
     "typescript": "5.9.3"
   },
-  "peerDependencies": { "n8n-workflow": "*" }
+  "peerDependencies": { "n8n-workflow": "*" },
+  "publishConfig": { "access": "public" }
 }

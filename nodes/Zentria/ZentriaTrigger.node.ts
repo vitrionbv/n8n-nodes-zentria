@@ -14,6 +14,7 @@ import {
 	collectionItems,
 	headerValue,
 	locatorId,
+	sameFormFilters,
 	sameStringArrays,
 	verifyStandardWebhook,
 	zentriaApiRequest,
@@ -95,7 +96,12 @@ export class ZentriaTrigger implements INodeType {
 				name: 'formId',
 				type: 'resourceLocator',
 				default: { mode: 'list', value: '' },
-				description: 'Optional form filter for sales.form.submitted',
+				description: 'Optional filter when listening for sales.form.submitted',
+				displayOptions: {
+					show: {
+						events: ['sales.form.submitted', '*'],
+					},
+				},
 				modes: [
 					{
 						displayName: 'From List',
@@ -145,6 +151,7 @@ export class ZentriaTrigger implements INodeType {
 				const webhookData = this.getWorkflowStaticData('node') as WebhookStatic;
 				const webhookUrl = this.getNodeWebhookUrl('default') as string;
 				const events = selectedEvents.call(this);
+				const filters = formFilters.call(this);
 
 				const body = await zentriaApiRequest.call(this, 'GET', '/api/public/webhooks', {}, {
 					itemsPerPage: 100,
@@ -155,7 +162,29 @@ export class ZentriaTrigger implements INodeType {
 					const itemEvents = Array.isArray(item.events) ? item.events.map(String) : [];
 					const active = item.isActive !== false && item.is_active !== false;
 
-					if (url === webhookUrl && active && sameStringArrays(itemEvents, events)) {
+					if (
+						url === webhookUrl
+						&& active
+						&& sameStringArrays(itemEvents, events)
+						&& sameFormFilters(item.filters, filters)
+					) {
+						if (typeof webhookData.secret !== 'string' || webhookData.secret === '') {
+							try {
+								await zentriaApiRequest.call(
+									this,
+									'DELETE',
+									`/api/public/webhooks/${String(item.id ?? '')}`,
+								);
+							} catch {
+								// Stale endpoint may already be gone.
+							}
+
+							delete webhookData.webhookId;
+							delete webhookData.secret;
+
+							return false;
+						}
+
 						webhookData.webhookId = item.id as string | number;
 						webhookData.url = url;
 						webhookData.events = itemEvents;
@@ -243,6 +272,11 @@ export class ZentriaTrigger implements INodeType {
 			if (!id || !timestamp || !signature || !verifyStandardWebhook(secret, id, timestamp, rawBody, signature)) {
 				throw new NodeOperationError(this.getNode(), 'Invalid Standard Webhooks signature');
 			}
+		} else {
+			throw new NodeOperationError(
+				this.getNode(),
+				'Missing webhook signing secret. Deactivate and reactivate this workflow to register the Zentria webhook again.',
+			);
 		}
 
 		const json = (req.body ?? {}) as IDataObject;

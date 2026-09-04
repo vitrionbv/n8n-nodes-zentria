@@ -83,6 +83,34 @@ export function locatorId(value: unknown): string {
 	return String(value ?? '');
 }
 
+export function locatorNumericId(value: unknown): number | undefined {
+	const id = locatorId(value).trim();
+
+	if (id === '') {
+		return undefined;
+	}
+
+	const numeric = Number(id);
+
+	return Number.isFinite(numeric) ? numeric : undefined;
+}
+
+export function sameFormFilters(left: unknown, right: unknown): boolean {
+	const leftIds = (left && typeof left === 'object' ? (left as IDataObject).form_ids : undefined) as unknown;
+	const rightIds = (right && typeof right === 'object' ? (right as IDataObject).form_ids : undefined) as unknown;
+	const normalize = (value: unknown): string[] =>
+		Array.isArray(value) ? value.map((item) => String(item)).sort() : [];
+
+	return sameStringArrays(normalize(leftIds), normalize(rightIds));
+}
+
+export const SALES_ACTIVITY_TYPES = [
+	{ name: 'Call', value: 'call' },
+	{ name: 'Follow Up', value: 'follow_up' },
+	{ name: 'Meeting', value: 'meeting' },
+	{ name: 'Task', value: 'task' },
+] as const;
+
 export function sameStringArrays(left: string[], right: string[]): boolean {
 	const a = [...left].map(String).sort();
 	const b = [...right].map(String).sort();

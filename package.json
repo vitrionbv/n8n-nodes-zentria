@@ -1,6 +1,6 @@
 {
   "name": "@vitrion/n8n-nodes-zentria",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "n8n community node for Zentria: signed webhooks plus the public team API.",
   "license": "MIT",
   "homepage": "https://github.com/vitrionbv/n8n-nodes-zentria",

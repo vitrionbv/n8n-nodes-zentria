@@ -5,16 +5,17 @@ import type {
 	INodeExecutionData,
 	INodeListSearchItems,
 	INodeProperties,
-	INodePropertyOptions,
 	INodeType,
 	INodeTypeDescription,
 } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 
 import {
+	SALES_ACTIVITY_TYPES,
 	collectionItems,
 	getMe,
 	locatorId,
+	locatorNumericId,
 	zentriaApiRequest,
 } from './GenericFunctions';
 
@@ -25,13 +26,14 @@ function locator(
 	name: string,
 	searchListMethod: string,
 	show: Record<string, string[]>,
+	required = true,
 ): INodeProperties {
 	return {
 		displayName,
 		name,
 		type: 'resourceLocator',
 		default: { mode: 'list', value: '' },
-		required: true,
+		required,
 		displayOptions: { show },
 		modes: [
 			{
@@ -258,8 +260,16 @@ export class Zentria implements INodeType {
 				displayOptions: { show: { operation: ['getAll'] } },
 			},
 			locator('Deal', 'dealId', 'searchDeals', {
-				resource: ['deal', 'activity'],
-				operation: ['get', 'update', 'moveStage', 'create'],
+				resource: ['deal'],
+				operation: ['get', 'update', 'moveStage'],
+			}),
+			locator('Deal', 'dealId', 'searchDeals', {
+				resource: ['activity'],
+				operation: ['create'],
+			}),
+			locator('Pipeline', 'pipelineId', 'searchPipelines', {
+				resource: ['deal'],
+				operation: ['create'],
 			}),
 			{
 				displayName: 'Activity ID',
@@ -276,11 +286,15 @@ export class Zentria implements INodeType {
 			locator('Person', 'personId', 'searchPeople', {
 				resource: ['deal'],
 				operation: ['create'],
-			}),
+			}, false),
 			locator('Organization', 'organizationId', 'searchOrganizations', {
 				resource: ['organization'],
 				operation: ['get', 'update'],
 			}),
+			locator('Organization', 'organizationId', 'searchOrganizations', {
+				resource: ['deal'],
+				operation: ['create'],
+			}, false),
 			locator('Stage', 'stageId', 'searchStages', {
 				resource: ['deal'],
 				operation: ['moveStage'],
@@ -290,8 +304,8 @@ export class Zentria implements INodeType {
 				operation: ['get'],
 			}),
 			locator('Customer', 'customerId', 'searchCustomers', {
-				resource: ['customer', 'crmLead'],
-				operation: ['get', 'update', 'approve', 'reject'],
+				resource: ['customer'],
+				operation: ['get', 'update'],
 			}),
 			locator('CRM Lead', 'crmLeadId', 'searchCrmLeads', {
 				resource: ['crmLead'],
@@ -354,7 +368,8 @@ export class Zentria implements INodeType {
 			{
 				displayName: 'Activity Type',
 				name: 'activityType',
-				type: 'string',
+				type: 'options',
+				options: [...SALES_ACTIVITY_TYPES],
 				default: 'task',
 				displayOptions: { show: { resource: ['activity'], operation: ['create'] } },
 			},
@@ -454,6 +469,15 @@ export class Zentria implements INodeType {
 
 				return { results };
 			},
+			searchPipelines: async function (this: ILoadOptionsFunctions, filter?: string) {
+				const { modules } = await getMe.call(this);
+
+				if (modules.sales_cms === false) {
+					return { results: [] };
+				}
+
+				return searchCollection(this, '/api/public/sales/pipelines', filter, ['name']);
+			},
 			searchCustomers: async function (this: ILoadOptionsFunctions, filter?: string) {
 				return searchCollection(this, '/api/public/customers', filter, ['name']);
 			},
@@ -491,30 +515,31 @@ export class Zentria implements INodeType {
 				return searchCollection(this, '/api/public/webhooks', filter, ['url', 'description']);
 			},
 		},
-		loadOptions: {
-			async loadResources(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-				const { modules } = await getMe.call(this);
-				const all: INodePropertyOptions[] = [
-					{ name: 'Deal', value: 'deal' },
-					{ name: 'Person', value: 'person' },
-				];
-
-				return all.filter((option) => !(salesResources.includes(String(option.value)) && modules.sales_cms === false));
-			},
-		},
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
+		const { modules } = await getMe.call(this);
 
 		for (let i = 0; i < items.length; i++) {
 			const resource = this.getNodeParameter('resource', i) as string;
 			const operation = this.getNodeParameter('operation', i) as string;
-			const { modules } = await getMe.call(this);
 
 			if (salesResources.includes(resource) && modules.sales_cms === false) {
 				throw new NodeOperationError(this.getNode(), 'Sales is off for this team. /me.modules.sales_cms is false.');
+			}
+
+			if (resource === 'crmLead' && modules.crm_leads === false) {
+				throw new NodeOperationError(this.getNode(), 'CRM leads is off for this team. /me.modules.crm_leads is false.');
+			}
+
+			if (resource === 'todo' && modules.todos === false) {
+				throw new NodeOperationError(this.getNode(), 'Todos is off for this team. /me.modules.todos is false.');
+			}
+
+			if (resource === 'stlFlow' && modules.speed_to_lead === false) {
+				throw new NodeOperationError(this.getNode(), 'Speed to lead is off for this team. /me.modules.speed_to_lead is false.');
 			}
 
 			const response = await runOperation.call(this, resource, operation, i);
@@ -549,9 +574,23 @@ async function runOperation(
 		}
 
 		if (operation === 'create') {
+			const personId = locatorNumericId(this.getNodeParameter('personId', index, ''));
+			const organizationId = locatorNumericId(this.getNodeParameter('organizationId', index, ''));
+			const pipelineId = locatorNumericId(this.getNodeParameter('pipelineId', index));
+
+			if (pipelineId === undefined) {
+				throw new NodeOperationError(this.getNode(), 'Pipeline is required to create a deal.');
+			}
+
+			if (personId === undefined && organizationId === undefined) {
+				throw new NodeOperationError(this.getNode(), 'Provide a person or an organization to create a deal.');
+			}
+
 			return zentriaApiRequest.call(this, 'POST', '/api/public/sales/deals', {
 				title: this.getNodeParameter('title', index),
-				personId: locatorId(this.getNodeParameter('personId', index, '')),
+				pipelineId,
+				...(personId !== undefined ? { personId } : {}),
+				...(organizationId !== undefined ? { organizationId } : {}),
 			});
 		}
 
@@ -562,11 +601,17 @@ async function runOperation(
 		}
 
 		if (operation === 'moveStage') {
+			const stageId = locatorNumericId(this.getNodeParameter('stageId', index));
+
+			if (stageId === undefined) {
+				throw new NodeOperationError(this.getNode(), 'Stage is required to move a deal.');
+			}
+
 			return zentriaApiRequest.call(
 				this,
 				'PATCH',
 				`/api/public/sales/deals/${locatorId(this.getNodeParameter('dealId', index))}/stage`,
-				{ stageId: locatorId(this.getNodeParameter('stageId', index)) },
+				{ stageId },
 			);
 		}
 	}
@@ -641,10 +686,16 @@ async function runOperation(
 		}
 
 		if (operation === 'create') {
+			const dealId = locatorNumericId(this.getNodeParameter('dealId', index));
+
+			if (dealId === undefined) {
+				throw new NodeOperationError(this.getNode(), 'Deal is required to create an activity.');
+			}
+
 			return zentriaApiRequest.call(this, 'POST', '/api/public/sales/activities', {
 				title: this.getNodeParameter('title', index),
 				type: this.getNodeParameter('activityType', index),
-				dealId: locatorId(this.getNodeParameter('dealId', index)),
+				dealId,
 			});
 		}
 

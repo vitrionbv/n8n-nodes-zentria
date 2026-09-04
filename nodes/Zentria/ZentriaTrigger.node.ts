@@ -38,11 +38,13 @@ function selectedEvents(this: IHookFunctions): string[] {
 
 function formFilters(this: IHookFunctions): IDataObject | undefined {
 	const events = selectedEvents.call(this);
+
 	if (!events.includes('sales.form.submitted') && !events.includes('*')) {
 		return undefined;
 	}
 
 	const formId = locatorId(this.getNodeParameter('formId', false));
+
 	if (formId === '') {
 		return undefined;
 	}
@@ -121,6 +123,7 @@ export class ZentriaTrigger implements INodeType {
 				filter?: string,
 			): Promise<{ results: Array<{ name: string; value: string }> }> {
 				const qs: IDataObject = { itemsPerPage: 50 };
+
 				if (filter) {
 					qs.q = filter;
 				}

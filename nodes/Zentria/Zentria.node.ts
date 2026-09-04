@@ -56,6 +56,7 @@ async function searchCollection(
 	nameKeys: string[],
 ): Promise<{ results: INodeListSearchItems[] }> {
 	const qs: IDataObject = { itemsPerPage: 50 };
+
 	if (filter) {
 		qs.q = filter;
 	}
@@ -396,6 +397,7 @@ export class Zentria implements INodeType {
 		listSearch: {
 			searchDeals: async function (this: ILoadOptionsFunctions, filter?: string) {
 				const { modules } = await getMe.call(this);
+
 				if (modules.sales_cms === false) {
 					return { results: [] };
 				}
@@ -404,6 +406,7 @@ export class Zentria implements INodeType {
 			},
 			searchPeople: async function (this: ILoadOptionsFunctions, filter?: string) {
 				const { modules } = await getMe.call(this);
+
 				if (modules.sales_cms === false) {
 					return { results: [] };
 				}
@@ -412,6 +415,7 @@ export class Zentria implements INodeType {
 			},
 			searchOrganizations: async function (this: ILoadOptionsFunctions, filter?: string) {
 				const { modules } = await getMe.call(this);
+
 				if (modules.sales_cms === false) {
 					return { results: [] };
 				}
@@ -420,6 +424,7 @@ export class Zentria implements INodeType {
 			},
 			searchForms: async function (this: ILoadOptionsFunctions, filter?: string) {
 				const { modules } = await getMe.call(this);
+
 				if (modules.sales_cms === false) {
 					return { results: [] };
 				}
@@ -428,6 +433,7 @@ export class Zentria implements INodeType {
 			},
 			searchStages: async function (this: ILoadOptionsFunctions, filter?: string) {
 				const { modules } = await getMe.call(this);
+
 				if (modules.sales_cms === false) {
 					return { results: [] };
 				}
@@ -449,6 +455,7 @@ export class Zentria implements INodeType {
 			},
 			searchCrmLeads: async function (this: ILoadOptionsFunctions, filter?: string) {
 				const { modules } = await getMe.call(this);
+
 				if (modules.crm_leads === false) {
 					return { results: [] };
 				}
@@ -460,6 +467,7 @@ export class Zentria implements INodeType {
 			},
 			searchTodos: async function (this: ILoadOptionsFunctions, filter?: string) {
 				const { modules } = await getMe.call(this);
+
 				if (modules.todos === false) {
 					return { results: [] };
 				}
@@ -468,6 +476,7 @@ export class Zentria implements INodeType {
 			},
 			searchStlFlows: async function (this: ILoadOptionsFunctions, filter?: string) {
 				const { modules } = await getMe.call(this);
+
 				if (modules.speed_to_lead === false) {
 					return { results: [] };
 				}
@@ -530,20 +539,24 @@ async function runOperation(
 		if (operation === 'getAll') {
 			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/sales/deals', {}, listQs));
 		}
+
 		if (operation === 'get') {
 			return zentriaApiRequest.call(this, 'GET', `/api/public/sales/deals/${locatorId(this.getNodeParameter('dealId', index))}`);
 		}
+
 		if (operation === 'create') {
 			return zentriaApiRequest.call(this, 'POST', '/api/public/sales/deals', {
 				title: this.getNodeParameter('title', index),
 				personId: locatorId(this.getNodeParameter('personId', index, '')),
 			});
 		}
+
 		if (operation === 'update') {
 			return zentriaApiRequest.call(this, 'PUT', `/api/public/sales/deals/${locatorId(this.getNodeParameter('dealId', index))}`, {
 				title: this.getNodeParameter('title', index),
 			});
 		}
+
 		if (operation === 'moveStage') {
 			return zentriaApiRequest.call(
 				this,
@@ -558,15 +571,18 @@ async function runOperation(
 		if (operation === 'getAll') {
 			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/sales/people', {}, listQs));
 		}
+
 		if (operation === 'get') {
 			return zentriaApiRequest.call(this, 'GET', `/api/public/sales/people/${locatorId(this.getNodeParameter('personId', index))}`);
 		}
+
 		if (operation === 'create') {
 			return zentriaApiRequest.call(this, 'POST', '/api/public/sales/people', {
 				name: this.getNodeParameter('name', index),
 				email: this.getNodeParameter('email', index),
 			});
 		}
+
 		if (operation === 'update') {
 			return zentriaApiRequest.call(this, 'PUT', `/api/public/sales/people/${locatorId(this.getNodeParameter('personId', index))}`, {
 				name: this.getNodeParameter('name', index),
@@ -578,14 +594,17 @@ async function runOperation(
 		if (operation === 'getAll') {
 			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/sales/organizations', {}, listQs));
 		}
+
 		if (operation === 'get') {
 			return zentriaApiRequest.call(this, 'GET', `/api/public/sales/organizations/${locatorId(this.getNodeParameter('organizationId', index))}`);
 		}
+
 		if (operation === 'create') {
 			return zentriaApiRequest.call(this, 'POST', '/api/public/sales/organizations', {
 				name: this.getNodeParameter('name', index),
 			});
 		}
+
 		if (operation === 'update') {
 			return zentriaApiRequest.call(
 				this,
@@ -616,6 +635,7 @@ async function runOperation(
 		if (operation === 'getAll') {
 			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/sales/activities', {}, listQs));
 		}
+
 		if (operation === 'create') {
 			return zentriaApiRequest.call(this, 'POST', '/api/public/sales/activities', {
 				title: this.getNodeParameter('title', index),
@@ -623,6 +643,7 @@ async function runOperation(
 				dealId: locatorId(this.getNodeParameter('dealId', index)),
 			});
 		}
+
 		if (operation === 'complete') {
 			return zentriaApiRequest.call(this, 'PATCH', `/api/public/sales/activities/${this.getNodeParameter('activityId', index)}`, {
 				status: 'done',
@@ -634,13 +655,17 @@ async function runOperation(
 		if (operation === 'getAll') {
 			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/crm/leads', {}, listQs));
 		}
+
 		if (operation === 'get') {
 			return zentriaApiRequest.call(this, 'GET', `/api/public/crm/leads/${locatorId(this.getNodeParameter('crmLeadId', index))}`);
 		}
+
 		const leadId = locatorId(this.getNodeParameter('crmLeadId', index));
+
 		if (operation === 'approve') {
 			return zentriaApiRequest.call(this, 'POST', `/api/public/crm/leads/${leadId}/approve`, {});
 		}
+
 		if (operation === 'reject') {
 			return zentriaApiRequest.call(this, 'POST', `/api/public/crm/leads/${leadId}/reject`, {});
 		}
@@ -650,15 +675,18 @@ async function runOperation(
 		if (operation === 'getAll') {
 			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/customers', {}, listQs));
 		}
+
 		if (operation === 'get') {
 			return zentriaApiRequest.call(this, 'GET', `/api/public/customers/${locatorId(this.getNodeParameter('customerId', index))}`);
 		}
+
 		if (operation === 'create') {
 			return zentriaApiRequest.call(this, 'POST', '/api/public/customers', {
 				name: this.getNodeParameter('name', index),
 				email: this.getNodeParameter('email', index),
 			});
 		}
+
 		if (operation === 'update') {
 			return zentriaApiRequest.call(this, 'PUT', `/api/public/customers/${locatorId(this.getNodeParameter('customerId', index))}`, {
 				name: this.getNodeParameter('name', index),
@@ -670,12 +698,14 @@ async function runOperation(
 		if (operation === 'getAll') {
 			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/members', {}, listQs));
 		}
+
 		if (operation === 'invite') {
 			return zentriaApiRequest.call(this, 'POST', '/api/public/members', {
 				email: this.getNodeParameter('email', index),
 				role: this.getNodeParameter('role', index),
 			});
 		}
+
 		if (operation === 'changeRole') {
 			return zentriaApiRequest.call(
 				this,
@@ -690,14 +720,17 @@ async function runOperation(
 		if (operation === 'getAll') {
 			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/todos', {}, listQs));
 		}
+
 		if (operation === 'get') {
 			return zentriaApiRequest.call(this, 'GET', `/api/public/todos/${locatorId(this.getNodeParameter('todoId', index))}`);
 		}
+
 		if (operation === 'create') {
 			return zentriaApiRequest.call(this, 'POST', '/api/public/todos', {
 				title: this.getNodeParameter('title', index),
 			});
 		}
+
 		if (operation === 'update') {
 			return zentriaApiRequest.call(this, 'PUT', `/api/public/todos/${locatorId(this.getNodeParameter('todoId', index))}`, {
 				title: this.getNodeParameter('title', index),
@@ -710,9 +743,11 @@ async function runOperation(
 		if (operation === 'getAll') {
 			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/stl/flows', {}, listQs));
 		}
+
 		if (operation === 'get') {
 			return zentriaApiRequest.call(this, 'GET', `/api/public/stl/flows/${locatorId(this.getNodeParameter('stlFlowId', index))}`);
 		}
+
 		if (operation === 'create') {
 			return zentriaApiRequest.call(this, 'POST', '/api/public/stl/flows', {
 				name: this.getNodeParameter('name', index),
@@ -720,6 +755,7 @@ async function runOperation(
 				customerIntegrationId: this.getNodeParameter('customerIntegrationId', index),
 			});
 		}
+
 		if (operation === 'delete') {
 			return zentriaApiRequest.call(this, 'DELETE', `/api/public/stl/flows/${locatorId(this.getNodeParameter('stlFlowId', index))}`);
 		}
@@ -729,6 +765,7 @@ async function runOperation(
 		if (operation === 'getAll') {
 			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/webhooks', {}, listQs));
 		}
+
 		if (operation === 'create') {
 			const events = String(this.getNodeParameter('webhookEvents', index))
 				.split(',')
@@ -741,6 +778,7 @@ async function runOperation(
 				source: 'n8n',
 			});
 		}
+
 		if (operation === 'delete') {
 			return zentriaApiRequest.call(this, 'DELETE', `/api/public/webhooks/${locatorId(this.getNodeParameter('webhookId', index))}`);
 		}

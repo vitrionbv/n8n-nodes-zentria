@@ -53,9 +53,11 @@ export function collectionItems(body: unknown): IDataObject[] {
 
 	if (body && typeof body === 'object') {
 		const record = body as Record<string, unknown>;
+
 		if (Array.isArray(record.member)) {
 			return record.member as IDataObject[];
 		}
+
 		if (Array.isArray(record['hydra:member'])) {
 			return record['hydra:member'] as IDataObject[];
 		}
@@ -105,6 +107,7 @@ export function verifyStandardWebhook(
 	toleranceSeconds = 300,
 ): boolean {
 	const ts = Number.parseInt(timestamp, 10);
+
 	if (!Number.isFinite(ts) || Math.abs(Math.floor(Date.now() / 1000) - ts) > toleranceSeconds) {
 		return false;
 	}

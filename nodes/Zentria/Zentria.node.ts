@@ -270,8 +270,12 @@ export class Zentria implements INodeType {
 				displayOptions: { show: { resource: ['activity'], operation: ['complete'] } },
 			},
 			locator('Person', 'personId', 'searchPeople', {
-				resource: ['person', 'deal'],
-				operation: ['get', 'update', 'create'],
+				resource: ['person'],
+				operation: ['get', 'update'],
+			}),
+			locator('Person', 'personId', 'searchPeople', {
+				resource: ['deal'],
+				operation: ['create'],
 			}),
 			locator('Organization', 'organizationId', 'searchOrganizations', {
 				resource: ['organization'],

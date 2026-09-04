@@ -27,6 +27,7 @@ function locator(
 	searchListMethod: string,
 	show: Record<string, string[]>,
 	required = true,
+	description?: string,
 ): INodeProperties {
 	return {
 		displayName,
@@ -34,6 +35,7 @@ function locator(
 		type: 'resourceLocator',
 		default: { mode: 'list', value: '' },
 		required,
+		...(description ? { description } : {}),
 		displayOptions: { show },
 		modes: [
 			{
@@ -271,6 +273,10 @@ export class Zentria implements INodeType {
 				resource: ['deal'],
 				operation: ['create'],
 			}),
+			locator('Pipeline', 'pipelineId', 'searchPipelines', {
+				resource: ['pipeline'],
+				operation: ['get'],
+			}, false, 'Leave empty to fetch the team default pipeline'),
 			{
 				displayName: 'Activity ID',
 				name: 'activityId',
@@ -677,7 +683,17 @@ async function runOperation(
 	}
 
 	if (resource === 'pipeline') {
-		return zentriaApiRequest.call(this, 'GET', '/api/public/sales/pipeline');
+		if (operation === 'getAll') {
+			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/sales/pipelines', {}, listQs));
+		}
+
+		const pipelineId = locatorNumericId(this.getNodeParameter('pipelineId', index, ''));
+
+		if (pipelineId === undefined) {
+			return zentriaApiRequest.call(this, 'GET', '/api/public/sales/pipeline');
+		}
+
+		return zentriaApiRequest.call(this, 'GET', `/api/public/sales/pipelines/${pipelineId}`);
 	}
 
 	if (resource === 'activity') {

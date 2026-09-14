@@ -27,6 +27,8 @@ The credential test calls `GET /api/public/me`. That response includes the bound
 
 On activate, the node registers an HTTPS webhook on the PAT team (`POST /api/public/webhooks`, `source: n8n`). On deactivate it deletes that endpoint. Duplicate activate with the same URL + events reuses the existing endpoint.
 
+The picker includes sales, CRM, customer, todo, and **13 invoice events** (`invoice.created` through `invoice.cancelled`, plus `invoice.reminder.*`).
+
 Incoming deliveries are checked with **Standard Webhooks** (`webhook-id`, `webhook-timestamp`, `webhook-signature`) using the secret returned at create time. No npm signing library — HMAC is inline.
 
 n8n Cloud and local test URLs differ. Activate the workflow in the environment that should receive events.

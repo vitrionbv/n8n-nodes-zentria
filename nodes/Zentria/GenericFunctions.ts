@@ -197,6 +197,8 @@ export const ZENTRIA_EVENTS = [
 	{ name: 'CRM lead created', value: 'crm.lead.created' },
 	{ name: 'CRM lead approved', value: 'crm.lead.approved' },
 	{ name: 'CRM lead rejected', value: 'crm.lead.rejected' },
+	{ name: 'Campaign 2 months under monthly target', value: 'crm.campaign.under_target' },
+	{ name: 'Campaign 2 months on monthly target', value: 'crm.campaign.on_target' },
 	{ name: 'Invoice created', value: 'invoice.created' },
 	{ name: 'Invoice ready', value: 'invoice.ready' },
 	{ name: 'Invoice sent', value: 'invoice.sent' },

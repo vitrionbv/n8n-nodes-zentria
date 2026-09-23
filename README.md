@@ -4,6 +4,16 @@ Community node for [Zentria](https://app.zentria.nl). It starts workflows from *
 
 n8n Cloud only runs **verified** community nodes. Until this package is verified, install it on **self-hosted n8n**.
 
+## Release (npm)
+
+Publish **from this repo** (`vitrionbv/n8n-nodes-zentria`), not from ZentriaApp.
+
+1. Bump `package.json` `version`, commit to `main`.
+2. Tag `X.Y.Z` (example: `0.1.6`) and push that tag.
+3. GitHub Action `Publish` (`.github/workflows/publish.yml`) runs `npm run release` with OIDC provenance.
+
+Do not add a publish workflow to ZentriaApp. Do not tag `n8n-nodes-v*` on the parent app. Do not `npm publish` from a laptop.
+
 ## Install (self-hosted)
 
 ```bash

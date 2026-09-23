@@ -1,0 +1,12 @@
+---
+description: This repo is the only npm publish path for the Zentria n8n node
+alwaysApply: true
+---
+
+# Publish
+
+This repository publishes `@vitrion/n8n-nodes-zentria`. ZentriaApp only vendors the submodule.
+
+Tag `X.Y.Z` here and push it. Workflow `.github/workflows/publish.yml` publishes with OIDC.
+
+Never publish from ZentriaApp. Never `npm publish` locally.

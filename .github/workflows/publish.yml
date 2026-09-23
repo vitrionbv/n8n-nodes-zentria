@@ -1,4 +1,5 @@
-# Publishes this n8n community node via GitHub Actions + npm Trusted Publisher.
+# Only npm publish path for @vitrion/n8n-nodes-zentria.
+# Trigger: push a version tag (X.Y.Z) to THIS repo. Never publish from ZentriaApp.
 # No NPM_TOKEN. Provenance comes from OIDC (required for n8n verification).
 
 name: Publish

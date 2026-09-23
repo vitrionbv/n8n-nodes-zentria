@@ -9,7 +9,7 @@ n8n Cloud only runs **verified** community nodes. Until this package is verified
 Publish **from this repo** (`vitrionbv/n8n-nodes-zentria`), not from ZentriaApp.
 
 1. Bump `package.json` `version`, commit to `main`.
-2. Tag `X.Y.Z` (example: `0.1.6`) and push that tag.
+2. Tag `X.Y.Z` (example: `0.1.7`) and push that tag.
 3. GitHub Action `Publish` (`.github/workflows/publish.yml`) runs `npm run release` with OIDC provenance.
 
 Do not add a publish workflow to ZentriaApp. Do not tag `n8n-nodes-v*` on the parent app. Do not `npm publish` from a laptop.
@@ -37,7 +37,7 @@ The credential test calls `GET /api/public/me`. That response includes the bound
 
 On activate, the node registers an HTTPS webhook on the PAT team (`POST /api/public/webhooks`, `source: n8n`). On deactivate it deletes that endpoint. Duplicate activate with the same URL + events reuses the existing endpoint.
 
-The picker includes sales, CRM, customer, todo, and **13 invoice events** (`invoice.created` through `invoice.cancelled`, plus `invoice.reminder.*`).
+The picker includes sales, CRM (including `crm.campaign.month_closed`), customer, todo, and **13 invoice events** (`invoice.created` through `invoice.cancelled`, plus `invoice.reminder.*`).
 
 Incoming deliveries are checked with **Standard Webhooks** (`webhook-id`, `webhook-timestamp`, `webhook-signature`) using the secret returned at create time. No npm signing library — HMAC is inline.
 

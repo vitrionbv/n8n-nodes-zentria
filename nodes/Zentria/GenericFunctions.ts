@@ -13,6 +13,7 @@ export type ZentriaModules = {
 	crm_leads?: boolean;
 	speed_to_lead?: boolean;
 	todos?: boolean;
+	business_profiles?: boolean;
 };
 
 export function normalizeBaseUrl(raw: string): string {
@@ -194,6 +195,11 @@ export const ZENTRIA_EVENTS = [
 	{ name: 'Calendar booked', value: 'sales.calendar.booked' },
 	{ name: 'Calendar declined', value: 'sales.calendar.declined' },
 	{ name: 'Calendar cancelled', value: 'sales.calendar.cancelled' },
+	{ name: 'Note created', value: 'sales.note.created' },
+	{ name: 'Note updated', value: 'sales.note.updated' },
+	{ name: 'Activity created', value: 'sales.activity.created' },
+	{ name: 'Activity completed', value: 'sales.activity.completed' },
+	{ name: 'Activity cancelled', value: 'sales.activity.cancelled' },
 	{ name: 'CRM lead created', value: 'crm.lead.created' },
 	{ name: 'CRM lead approved', value: 'crm.lead.approved' },
 	{ name: 'CRM lead rejected', value: 'crm.lead.rejected' },
@@ -214,8 +220,15 @@ export const ZENTRIA_EVENTS = [
 	{ name: 'Customer created', value: 'customer.created' },
 	{ name: 'Customer updated', value: 'customer.updated' },
 	{ name: 'Customer archived', value: 'customer.archived' },
-	{ name: 'Contact created', value: 'contact.created' },
-	{ name: 'Contact updated', value: 'contact.updated' },
 	{ name: 'Todo created', value: 'todo.created' },
 	{ name: 'Todo completed', value: 'todo.completed' },
+	{ name: 'Business Profile review created', value: 'business_profile.review.created' },
+	{ name: 'Business Profile review updated', value: 'business_profile.review.updated' },
+	{ name: 'Business Profile review reply pending approval', value: 'business_profile.review_reply.pending_approval' },
+	{ name: 'Business Profile review reply sent', value: 'business_profile.review_reply.sent' },
+	{ name: 'Business Profile location change detected', value: 'business_profile.location_change.detected' },
+	{ name: 'Business Profile location change decided', value: 'business_profile.location_change.decided' },
+	{ name: 'Business Profile post published', value: 'business_profile.post.published' },
+	{ name: 'Business Profile post failed', value: 'business_profile.post.failed' },
+	{ name: 'Business Profile account needs re-authorization', value: 'business_profile.account.needs_reauth' },
 ];

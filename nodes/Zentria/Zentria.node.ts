@@ -107,6 +107,7 @@ export class Zentria implements INodeType {
 				noDataExpression: true,
 				options: [
 					{ name: 'Activity', value: 'activity' },
+					{ name: 'Business Profile', value: 'businessProfile' },
 					{ name: 'CRM Lead', value: 'crmLead' },
 					{ name: 'Customer', value: 'customer' },
 					{ name: 'Deal', value: 'deal' },
@@ -255,11 +256,33 @@ export class Zentria implements INodeType {
 				default: 'getAll',
 			},
 			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: { show: { resource: ['businessProfile'] } },
+				options: [
+					{ name: 'Accept Change', value: 'acceptChange', action: 'Accept a location change' },
+					{ name: 'Approve Review Reply', value: 'approveReply', action: 'Approve and send a review reply' },
+					{ name: 'Create Post', value: 'createPost', action: 'Create a post' },
+					{ name: 'Delete Post', value: 'deletePost', action: 'Delete a post' },
+					{ name: 'Get Location', value: 'getLocation', action: 'Get a location' },
+					{ name: 'Get Many Changes', value: 'getChanges', action: 'List location changes' },
+					{ name: 'Get Many Locations', value: 'getLocations', action: 'List locations' },
+					{ name: 'Get Many Posts', value: 'getPosts', action: 'List posts' },
+					{ name: 'Get Many Review Replies', value: 'getReplies', action: 'List review replies' },
+					{ name: 'Get Many Reviews', value: 'getReviews', action: 'List reviews' },
+					{ name: 'Reject Change', value: 'rejectChange', action: 'Reject a location change' },
+					{ name: 'Reject Review Reply', value: 'rejectReply', action: 'Reject a review reply' },
+				],
+				default: 'getLocations',
+			},
+			{
 				displayName: 'Search',
 				name: 'q',
 				type: 'string',
 				default: '',
-				displayOptions: { show: { operation: ['getAll'] } },
+				displayOptions: { show: { operation: ['getAll', 'getLocations'] } },
 			},
 			locator('Deal', 'dealId', 'searchDeals', {
 				resource: ['deal'],
@@ -409,6 +432,189 @@ export class Zentria implements INodeType {
 				displayOptions: { show: { resource: ['webhook'], operation: ['create'] } },
 			},
 			{
+				displayName: 'Location ID',
+				name: 'bpLocationId',
+				type: 'number',
+				default: 0,
+				required: true,
+				displayOptions: { show: { resource: ['businessProfile'], operation: ['getLocation'] } },
+			},
+			{
+				displayName: 'Review Reply ID',
+				name: 'bpReplyId',
+				type: 'number',
+				default: 0,
+				required: true,
+				displayOptions: { show: { resource: ['businessProfile'], operation: ['approveReply', 'rejectReply'] } },
+			},
+			{
+				displayName: 'Reply Text',
+				name: 'bpReplyBody',
+				type: 'string',
+				typeOptions: { rows: 4 },
+				default: '',
+				description: 'Edited reply text. Leave empty to send the draft as it is.',
+				displayOptions: { show: { resource: ['businessProfile'], operation: ['approveReply'] } },
+			},
+			{
+				displayName: 'Change ID',
+				name: 'bpChangeId',
+				type: 'number',
+				default: 0,
+				required: true,
+				displayOptions: { show: { resource: ['businessProfile'], operation: ['acceptChange', 'rejectChange'] } },
+			},
+			{
+				displayName: 'Post ID',
+				name: 'bpPostId',
+				type: 'number',
+				default: 0,
+				required: true,
+				displayOptions: { show: { resource: ['businessProfile'], operation: ['deletePost'] } },
+			},
+			{
+				displayName: 'Location Filters',
+				name: 'bpLocationFilters',
+				type: 'collection',
+				placeholder: 'Add Filter',
+				default: {},
+				displayOptions: { show: { resource: ['businessProfile'], operation: ['getLocations'] } },
+				options: [
+					{ displayName: 'Campaign ID', name: 'campaignId', type: 'number', default: 0 },
+					{ displayName: 'Customer ID', name: 'customerId', type: 'number', default: 0 },
+					{ displayName: 'Sync Enabled', name: 'syncEnabled', type: 'boolean', default: true },
+					{ displayName: 'Verified', name: 'verified', type: 'boolean', default: true },
+				],
+			},
+			{
+				displayName: 'Review Filters',
+				name: 'bpReviewFilters',
+				type: 'collection',
+				placeholder: 'Add Filter',
+				default: {},
+				displayOptions: { show: { resource: ['businessProfile'], operation: ['getReviews'] } },
+				options: [
+					{ displayName: 'Answered', name: 'answered', type: 'boolean', default: false },
+					{ displayName: 'Location ID', name: 'locationId', type: 'number', default: 0 },
+					{ displayName: 'Since', name: 'since', type: 'dateTime', default: '' },
+					{ displayName: 'Stars', name: 'stars', type: 'number', typeOptions: { minValue: 1, maxValue: 5 }, default: 5 },
+				],
+			},
+			{
+				displayName: 'Filters',
+				name: 'bpStatusFilters',
+				type: 'collection',
+				placeholder: 'Add Filter',
+				default: {},
+				displayOptions: {
+					show: { resource: ['businessProfile'], operation: ['getReplies', 'getChanges', 'getPosts'] },
+				},
+				options: [
+					{ displayName: 'Location ID', name: 'locationId', type: 'number', default: 0 },
+					{
+						displayName: 'Status',
+						name: 'status',
+						type: 'string',
+						default: '',
+						description:
+							'Replies: pending_approval, sent, rejected and so on. Changes: open, accepted, rejected. Posts: draft, scheduled, published and so on.',
+					},
+				],
+			},
+			{
+				displayName: 'Location IDs',
+				name: 'bpPostLocationIds',
+				type: 'string',
+				default: '',
+				required: true,
+				description: 'Comma-separated location IDs. One post is created per location.',
+				displayOptions: { show: { resource: ['businessProfile'], operation: ['createPost'] } },
+			},
+			{
+				displayName: 'Topic Type',
+				name: 'bpTopicType',
+				type: 'options',
+				options: [
+					{ name: 'Event', value: 'EVENT' },
+					{ name: 'Offer', value: 'OFFER' },
+					{ name: 'Standard', value: 'STANDARD' },
+				],
+				default: 'STANDARD',
+				displayOptions: { show: { resource: ['businessProfile'], operation: ['createPost'] } },
+			},
+			{
+				displayName: 'Summary',
+				name: 'bpSummary',
+				type: 'string',
+				typeOptions: { rows: 4 },
+				default: '',
+				required: true,
+				displayOptions: { show: { resource: ['businessProfile'], operation: ['createPost'] } },
+			},
+			{
+				displayName: 'Mode',
+				name: 'bpMode',
+				type: 'options',
+				options: [
+					{ name: 'Draft', value: 'draft' },
+					{ name: 'Publish Now', value: 'publish_now' },
+					{ name: 'Schedule', value: 'schedule' },
+				],
+				default: 'draft',
+				displayOptions: { show: { resource: ['businessProfile'], operation: ['createPost'] } },
+			},
+			{
+				displayName: 'Scheduled For',
+				name: 'bpScheduledFor',
+				type: 'dateTime',
+				default: '',
+				description: 'Amsterdam time',
+				displayOptions: {
+					show: { resource: ['businessProfile'], operation: ['createPost'], bpMode: ['schedule'] },
+				},
+			},
+			{
+				displayName: 'Post Options',
+				name: 'bpPostOptions',
+				type: 'collection',
+				placeholder: 'Add Option',
+				default: {},
+				displayOptions: { show: { resource: ['businessProfile'], operation: ['createPost'] } },
+				options: [
+					{
+						displayName: 'Call To Action',
+						name: 'ctaType',
+						type: 'options',
+						options: [
+							{ name: 'Book', value: 'BOOK' },
+							{ name: 'Call', value: 'CALL' },
+							{ name: 'Learn More', value: 'LEARN_MORE' },
+							{ name: 'Order', value: 'ORDER' },
+							{ name: 'Shop', value: 'SHOP' },
+							{ name: 'Sign Up', value: 'SIGN_UP' },
+						],
+						default: 'LEARN_MORE',
+					},
+					{ displayName: 'Call To Action URL', name: 'ctaUrl', type: 'string', default: '' },
+					{ displayName: 'Coupon Code', name: 'couponCode', type: 'string', default: '' },
+					{ displayName: 'Event End', name: 'eventEnd', type: 'dateTime', default: '' },
+					{ displayName: 'Event Start', name: 'eventStart', type: 'dateTime', default: '' },
+					{
+						displayName: 'Language',
+						name: 'language',
+						type: 'options',
+						options: [
+							{ name: 'Dutch', value: 'nl' },
+							{ name: 'English', value: 'en' },
+						],
+						default: 'nl',
+					},
+					{ displayName: 'Redeem URL', name: 'redeemUrl', type: 'string', default: '' },
+					{ displayName: 'Terms', name: 'terms', type: 'string', default: '' },
+					{ displayName: 'Title', name: 'title', type: 'string', default: '', description: 'Required for events and offers' },
+				],
+			},
+			{
 				displayName: 'Completed',
 				name: 'isCompleted',
 				type: 'boolean',
@@ -546,6 +752,13 @@ export class Zentria implements INodeType {
 
 			if (resource === 'stlFlow' && modules.speed_to_lead === false) {
 				throw new NodeOperationError(this.getNode(), 'Speed to lead is off for this team. /me.modules.speed_to_lead is false.');
+			}
+
+			if (resource === 'businessProfile' && modules.business_profiles === false) {
+				throw new NodeOperationError(
+					this.getNode(),
+					'Business Profiles is off for this team. /me.modules.business_profiles is false.',
+				);
 			}
 
 			const response = await runOperation.call(this, resource, operation, i);
@@ -855,5 +1068,155 @@ async function runOperation(
 		}
 	}
 
+	if (resource === 'businessProfile') {
+		return runBusinessProfileOperation.call(this, operation, index, listQs);
+	}
+
 	throw new NodeOperationError(this.getNode(), `Unsupported operation ${resource}.${operation}`);
+}
+
+function businessProfileQuery(filters: IDataObject, keys: Record<string, string>): IDataObject {
+	const qs: IDataObject = { itemsPerPage: 50 };
+
+	for (const [key, param] of Object.entries(keys)) {
+		const value = filters[key];
+
+		if (value !== undefined && value !== '' && value !== 0) {
+			qs[param] = value as string | number | boolean;
+		}
+	}
+
+	return qs;
+}
+
+async function runBusinessProfileOperation(
+	this: IExecuteFunctions,
+	operation: string,
+	index: number,
+	listQs: IDataObject,
+): Promise<IDataObject | IDataObject[]> {
+	const base = '/api/public/business-profiles';
+	const numeric = (name: string): number => Number(this.getNodeParameter(name, index));
+
+	if (operation === 'getLocations') {
+		const filters = this.getNodeParameter('bpLocationFilters', index, {}) as IDataObject;
+		const qs = {
+			...businessProfileQuery(filters, {
+				customerId: 'customer_id',
+				campaignId: 'campaign_id',
+				verified: 'verified',
+				syncEnabled: 'sync_enabled',
+			}),
+			...(listQs.q ? { q: listQs.q } : {}),
+		};
+
+		return collectionItems(await zentriaApiRequest.call(this, 'GET', `${base}/locations`, {}, qs));
+	}
+
+	if (operation === 'getLocation') {
+		return zentriaApiRequest.call(this, 'GET', `${base}/locations/${numeric('bpLocationId')}`);
+	}
+
+	if (operation === 'getReviews') {
+		const filters = this.getNodeParameter('bpReviewFilters', index, {}) as IDataObject;
+		const qs = businessProfileQuery(filters, {
+			locationId: 'location_id',
+			stars: 'stars',
+			answered: 'answered',
+			since: 'since',
+		});
+
+		return collectionItems(await zentriaApiRequest.call(this, 'GET', `${base}/reviews`, {}, qs));
+	}
+
+	if (operation === 'getReplies' || operation === 'getChanges' || operation === 'getPosts') {
+		const filters = this.getNodeParameter('bpStatusFilters', index, {}) as IDataObject;
+		const qs = businessProfileQuery(filters, { locationId: 'location_id', status: 'status' });
+		const path = { getReplies: 'review-replies', getChanges: 'changes', getPosts: 'posts' }[operation];
+
+		return collectionItems(await zentriaApiRequest.call(this, 'GET', `${base}/${path}`, {}, qs));
+	}
+
+	if (operation === 'approveReply') {
+		const body = String(this.getNodeParameter('bpReplyBody', index, '')).trim();
+
+		return zentriaApiRequest.call(
+			this,
+			'POST',
+			`${base}/review-replies/${numeric('bpReplyId')}/approve`,
+			body !== '' ? { body } : {},
+		);
+	}
+
+	if (operation === 'rejectReply') {
+		return zentriaApiRequest.call(this, 'POST', `${base}/review-replies/${numeric('bpReplyId')}/reject`, {});
+	}
+
+	if (operation === 'acceptChange' || operation === 'rejectChange') {
+		const action = operation === 'acceptChange' ? 'accept' : 'reject';
+
+		return zentriaApiRequest.call(this, 'POST', `${base}/changes/${numeric('bpChangeId')}/${action}`, {});
+	}
+
+	if (operation === 'createPost') {
+		const options = this.getNodeParameter('bpPostOptions', index, {}) as IDataObject;
+		const mode = this.getNodeParameter('bpMode', index) as string;
+		const locationIds = String(this.getNodeParameter('bpPostLocationIds', index))
+			.split(',')
+			.map((id) => Number(id.trim()))
+			.filter((id) => Number.isInteger(id) && id > 0);
+
+		if (locationIds.length === 0) {
+			throw new NodeOperationError(this.getNode(), 'Provide at least one location id.');
+		}
+
+		const offer: IDataObject = {};
+
+		if (options.couponCode) {
+offer.coupon_code = options.couponCode;
+}
+
+		if (options.redeemUrl) {
+offer.redeem_url = options.redeemUrl;
+}
+
+		if (options.terms) {
+offer.terms = options.terms;
+}
+
+		const optional: IDataObject = {
+			title: options.title,
+			language: options.language,
+			cta_type: options.ctaType,
+			cta_url: options.ctaUrl,
+			event_start: options.eventStart,
+			event_end: options.eventEnd,
+			scheduled_for: mode === 'schedule' ? this.getNodeParameter('bpScheduledFor', index) : undefined,
+			offer: Object.keys(offer).length > 0 ? offer : undefined,
+		};
+
+		const body: IDataObject = {
+			location_ids: locationIds,
+			topic_type: this.getNodeParameter('bpTopicType', index),
+			summary: this.getNodeParameter('bpSummary', index),
+			mode,
+		};
+
+		for (const [key, value] of Object.entries(optional)) {
+			if (value !== undefined && value !== '') {
+				body[key] = value;
+			}
+		}
+
+		return zentriaApiRequest.call(this, 'POST', `${base}/posts`, body);
+	}
+
+	if (operation === 'deletePost') {
+		const id = numeric('bpPostId');
+		await zentriaApiRequest.call(this, 'DELETE', `${base}/posts/${id}`);
+
+		return { deleted: true, id };
+	}
+
+	throw new NodeOperationError(this.getNode(), `Unsupported operation businessProfile.${operation}`);
 }

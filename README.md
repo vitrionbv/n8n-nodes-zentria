@@ -47,7 +47,7 @@ n8n Cloud and local test URLs differ. Activate the workflow in the environment t
 
 Resource + operation against `/api/public`. Foreign keys use searchable locators (`q`) so you pick “Discovery call”, not a numeric id.
 
-Minimum operations: deals (get/list/create/update/**move stage**), people/orgs, forms/submissions, pipeline, activities (create/complete), CRM leads (approve/reject), customers, members, todos, Speed to Lead flows, webhooks, and Business Profile (list locations, reviews, review replies, changes and posts; approve or reject a reply; accept or reject a change; create or delete a post). Business Profile needs the `business-profiles:read` scope, and `business-profiles:write` for the approve, reject, accept, create and delete operations.
+Minimum operations: deals (get/list/create/update/**move stage**), people/orgs, forms/submissions, pipeline, activities (create/complete), CRM leads (approve/reject), customers, members, todos, Speed to Lead flows, webhooks, and Business Profile (list locations, reviews, review replies, changes and posts; approve or reject a reply; accept or reject a change; create or delete a post; read-only results of a location: performance and search keywords). Business Profile needs the `business-profiles:read` scope, and `business-profiles:write` for the approve, reject, accept, create and delete operations.
 
 ## Loop risk
 

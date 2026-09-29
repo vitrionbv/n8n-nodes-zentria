@@ -272,6 +272,8 @@ export class Zentria implements INodeType {
 					{ name: 'Get Many Posts', value: 'getPosts', action: 'List posts' },
 					{ name: 'Get Many Review Replies', value: 'getReplies', action: 'List review replies' },
 					{ name: 'Get Many Reviews', value: 'getReviews', action: 'List reviews' },
+					{ name: 'Get Many Search Keywords', value: 'getSearchKeywords', action: 'List search keywords of a location' },
+					{ name: 'Get Performance', value: 'getPerformance', action: 'Get the results of a location' },
 					{ name: 'Reject Change', value: 'rejectChange', action: 'Reject a location change' },
 					{ name: 'Reject Review Reply', value: 'rejectReply', action: 'Reject a review reply' },
 				],
@@ -282,7 +284,7 @@ export class Zentria implements INodeType {
 				name: 'q',
 				type: 'string',
 				default: '',
-				displayOptions: { show: { operation: ['getAll', 'getLocations'] } },
+				displayOptions: { show: { operation: ['getAll', 'getLocations', 'getSearchKeywords'] } },
 			},
 			locator('Deal', 'dealId', 'searchDeals', {
 				resource: ['deal'],
@@ -437,7 +439,12 @@ export class Zentria implements INodeType {
 				type: 'number',
 				default: 0,
 				required: true,
-				displayOptions: { show: { resource: ['businessProfile'], operation: ['getLocation'] } },
+				displayOptions: {
+					show: {
+						resource: ['businessProfile'],
+						operation: ['getLocation', 'getPerformance', 'getSearchKeywords'],
+					},
+				},
 			},
 			{
 				displayName: 'Review Reply ID',
@@ -485,6 +492,64 @@ export class Zentria implements INodeType {
 					{ displayName: 'Sync Enabled', name: 'syncEnabled', type: 'boolean', default: true },
 					{ displayName: 'Verified', name: 'verified', type: 'boolean', default: true },
 				],
+			},
+			{
+				displayName: 'Period',
+				name: 'bpPeriod',
+				type: 'options',
+				default: 'last_28',
+				description: 'Google reports these numbers 2 to 3 days late',
+				options: [
+					{ name: 'Custom', value: 'custom' },
+					{ name: 'Last 28 Days', value: 'last_28' },
+					{ name: 'Last 7 Days', value: 'last_7' },
+					{ name: 'Last 90 Days', value: 'last_90' },
+					{ name: 'Last Month', value: 'last_month' },
+					{ name: 'This Month', value: 'this_month' },
+				],
+				displayOptions: { show: { resource: ['businessProfile'], operation: ['getPerformance'] } },
+			},
+			{
+				displayName: 'From',
+				name: 'bpFrom',
+				type: 'string',
+				default: '',
+				placeholder: 'YYYY-MM-DD',
+				displayOptions: {
+					show: { resource: ['businessProfile'], operation: ['getPerformance'], bpPeriod: ['custom'] },
+				},
+			},
+			{
+				displayName: 'To',
+				name: 'bpTo',
+				type: 'string',
+				default: '',
+				placeholder: 'YYYY-MM-DD',
+				displayOptions: {
+					show: { resource: ['businessProfile'], operation: ['getPerformance'], bpPeriod: ['custom'] },
+				},
+			},
+			{
+				displayName: 'Granularity',
+				name: 'bpGranularity',
+				type: 'options',
+				default: 'day',
+				description: 'Series buckets. Use week for periods over 62 days.',
+				options: [
+					{ name: 'Day', value: 'day' },
+					{ name: 'Week', value: 'week' },
+				],
+				displayOptions: { show: { resource: ['businessProfile'], operation: ['getPerformance'] } },
+			},
+			{
+				displayName: 'Month',
+				name: 'bpMonth',
+				type: 'string',
+				default: '',
+				placeholder: 'YYYY-MM',
+				description:
+					'Month of the search terms. Leave empty for the newest month with data. A threshold means the term was used fewer than that many times.',
+				displayOptions: { show: { resource: ['businessProfile'], operation: ['getSearchKeywords'] } },
 			},
 			{
 				displayName: 'Review Filters',
@@ -1115,6 +1180,46 @@ async function runBusinessProfileOperation(
 
 	if (operation === 'getLocation') {
 		return zentriaApiRequest.call(this, 'GET', `${base}/locations/${numeric('bpLocationId')}`);
+	}
+
+	if (operation === 'getPerformance') {
+		const period = String(this.getNodeParameter('bpPeriod', index, 'last_28'));
+		const qs: IDataObject = {
+			period,
+			granularity: String(this.getNodeParameter('bpGranularity', index, 'day')),
+		};
+
+		if (period === 'custom') {
+			qs.from = String(this.getNodeParameter('bpFrom', index, ''));
+			qs.to = String(this.getNodeParameter('bpTo', index, ''));
+		}
+
+		return zentriaApiRequest.call(
+			this,
+			'GET',
+			`${base}/locations/${numeric('bpLocationId')}/performance`,
+			{},
+			qs,
+		);
+	}
+
+	if (operation === 'getSearchKeywords') {
+		const month = String(this.getNodeParameter('bpMonth', index, '')).trim();
+		const qs = {
+			itemsPerPage: 100,
+			...(month !== '' ? { month } : {}),
+			...(listQs.q ? { q: listQs.q } : {}),
+		};
+
+		return collectionItems(
+			await zentriaApiRequest.call(
+				this,
+				'GET',
+				`${base}/locations/${numeric('bpLocationId')}/search-keywords`,
+				{},
+				qs,
+			),
+		);
 	}
 
 	if (operation === 'getReviews') {

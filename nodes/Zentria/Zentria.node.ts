@@ -587,6 +587,16 @@ export class Zentria implements INodeType {
 				],
 			},
 			{
+				displayName: 'Return All',
+				name: 'bpReturnAll',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to return all results (paged 100 at a time) or only the first 50',
+				displayOptions: {
+					show: { resource: ['businessProfile'], operation: ['getReplies', 'getChanges', 'getPosts'] },
+				},
+			},
+			{
 				displayName: 'Location IDs',
 				name: 'bpPostLocationIds',
 				type: 'string',
@@ -1239,7 +1249,25 @@ async function runBusinessProfileOperation(
 		const qs = businessProfileQuery(filters, { locationId: 'location_id', status: 'status' });
 		const path = { getReplies: 'review-replies', getChanges: 'changes', getPosts: 'posts' }[operation];
 
-		return collectionItems(await zentriaApiRequest.call(this, 'GET', `${base}/${path}`, {}, qs));
+		if (!this.getNodeParameter('bpReturnAll', index, false)) {
+			return collectionItems(await zentriaApiRequest.call(this, 'GET', `${base}/${path}`, {}, qs));
+		}
+
+		const perPage = 100;
+		const all: IDataObject[] = [];
+
+		for (let page = 1; page <= 100; page++) {
+			const items = collectionItems(
+				await zentriaApiRequest.call(this, 'GET', `${base}/${path}`, {}, { ...qs, itemsPerPage: perPage, page }),
+			);
+			all.push(...items);
+
+			if (items.length < perPage) {
+				break;
+			}
+		}
+
+		return all;
 	}
 
 	if (operation === 'approveReply') {

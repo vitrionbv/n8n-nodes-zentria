@@ -262,10 +262,11 @@ export class Zentria implements INodeType {
 				noDataExpression: true,
 				displayOptions: { show: { resource: ['businessProfile'] } },
 				options: [
-					{ name: 'Accept Change', value: 'acceptChange', action: 'Accept a location change' },
+					{ name: 'Accept Change (Google Is Right)', value: 'acceptChange', action: 'Accept a location change' },
 					{ name: 'Approve Review Reply', value: 'approveReply', action: 'Approve and send a review reply' },
 					{ name: 'Create Post', value: 'createPost', action: 'Create a post' },
 					{ name: 'Delete Post', value: 'deletePost', action: 'Delete a post' },
+					{ name: 'Dismiss Change', value: 'dismissChange', action: 'Mark a location change as handled' },
 					{ name: 'Get Location', value: 'getLocation', action: 'Get a location' },
 					{ name: 'Get Many Changes', value: 'getChanges', action: 'List location changes' },
 					{ name: 'Get Many Locations', value: 'getLocations', action: 'List locations' },
@@ -469,7 +470,9 @@ export class Zentria implements INodeType {
 				type: 'number',
 				default: 0,
 				required: true,
-				displayOptions: { show: { resource: ['businessProfile'], operation: ['acceptChange', 'rejectChange'] } },
+				displayOptions: {
+					show: { resource: ['businessProfile'], operation: ['acceptChange', 'dismissChange', 'rejectChange'] },
+				},
 			},
 			{
 				displayName: 'Post ID',
@@ -488,6 +491,13 @@ export class Zentria implements INodeType {
 				displayOptions: { show: { resource: ['businessProfile'], operation: ['getLocations'] } },
 				options: [
 					{ displayName: 'Campaign ID', name: 'campaignId', type: 'number', default: 0 },
+					{
+						displayName: 'Category',
+						name: 'category',
+						type: 'string',
+						default: '',
+						description: 'Only locations with this category (primary or additional), exact Dutch name, e.g. Loodgieter',
+					},
 					{ displayName: 'Customer ID', name: 'customerId', type: 'number', default: 0 },
 					{ displayName: 'Sync Enabled', name: 'syncEnabled', type: 'boolean', default: true },
 					{ displayName: 'Verified', name: 'verified', type: 'boolean', default: true },
@@ -582,7 +592,7 @@ export class Zentria implements INodeType {
 						type: 'string',
 						default: '',
 						description:
-							'Replies: pending_approval, sent, rejected and so on. Changes: open, accepted, rejected. Posts: draft, scheduled, published and so on.',
+							'Replies: pending_approval, sent, rejected and so on. Changes: open, accepted, dismissed, rejected. Posts: draft, scheduled, published and so on.',
 					},
 				],
 			},
@@ -1181,6 +1191,7 @@ async function runBusinessProfileOperation(
 				campaignId: 'campaign_id',
 				verified: 'verified',
 				syncEnabled: 'sync_enabled',
+				category: 'category',
 			}),
 			...(listQs.q ? { q: listQs.q } : {}),
 		};
@@ -1285,8 +1296,8 @@ async function runBusinessProfileOperation(
 		return zentriaApiRequest.call(this, 'POST', `${base}/review-replies/${numeric('bpReplyId')}/reject`, {});
 	}
 
-	if (operation === 'acceptChange' || operation === 'rejectChange') {
-		const action = operation === 'acceptChange' ? 'accept' : 'reject';
+	if (operation === 'acceptChange' || operation === 'dismissChange' || operation === 'rejectChange') {
+		const action = { acceptChange: 'accept', dismissChange: 'dismiss', rejectChange: 'reject' }[operation];
 
 		return zentriaApiRequest.call(this, 'POST', `${base}/changes/${numeric('bpChangeId')}/${action}`, {});
 	}

@@ -267,6 +267,12 @@ export class Zentria implements INodeType {
 					{ name: 'Create Post', value: 'createPost', action: 'Create a post' },
 					{ name: 'Delete Post', value: 'deletePost', action: 'Delete a post' },
 					{ name: 'Dismiss Change', value: 'dismissChange', action: 'Mark a location change as handled' },
+					{
+						name: 'Dismiss Review',
+						value: 'dismissReview',
+						action: 'Dismiss a review without replying',
+						description: 'Take an unanswered review out of the queue without replying. Nothing is sent to Google.',
+					},
 					{ name: 'Get Location', value: 'getLocation', action: 'Get a location' },
 					{ name: 'Get Many Changes', value: 'getChanges', action: 'List location changes' },
 					{ name: 'Get Many Locations', value: 'getLocations', action: 'List locations' },
@@ -277,6 +283,7 @@ export class Zentria implements INodeType {
 					{ name: 'Get Performance', value: 'getPerformance', action: 'Get the results of a location' },
 					{ name: 'Reject Change', value: 'rejectChange', action: 'Reject a location change' },
 					{ name: 'Reject Review Reply', value: 'rejectReply', action: 'Reject a review reply' },
+					{ name: 'Restore Review', value: 'restoreReview', action: 'Put a dismissed review back in the queue' },
 				],
 				default: 'getLocations',
 			},
@@ -456,6 +463,14 @@ export class Zentria implements INodeType {
 				displayOptions: { show: { resource: ['businessProfile'], operation: ['approveReply', 'rejectReply'] } },
 			},
 			{
+				displayName: 'Review ID',
+				name: 'bpReviewId',
+				type: 'number',
+				default: 0,
+				required: true,
+				displayOptions: { show: { resource: ['businessProfile'], operation: ['dismissReview', 'restoreReview'] } },
+			},
+			{
 				displayName: 'Reply Text',
 				name: 'bpReplyBody',
 				type: 'string',
@@ -570,6 +585,14 @@ export class Zentria implements INodeType {
 				displayOptions: { show: { resource: ['businessProfile'], operation: ['getReviews'] } },
 				options: [
 					{ displayName: 'Answered', name: 'answered', type: 'boolean', default: false },
+					{
+						displayName: 'Dismissed',
+						name: 'dismissed',
+						type: 'boolean',
+						default: false,
+						description:
+							'Whether to return only reviews dismissed without a reply (on) or only reviews that are not dismissed (off). Combine Answered off and Dismissed off for the reviews still to answer.',
+					},
 					{ displayName: 'Location ID', name: 'locationId', type: 'number', default: 0 },
 					{ displayName: 'Since', name: 'since', type: 'dateTime', default: '' },
 					{ displayName: 'Stars', name: 'stars', type: 'number', typeOptions: { minValue: 1, maxValue: 5 }, default: 5 },
@@ -1249,6 +1272,7 @@ async function runBusinessProfileOperation(
 			locationId: 'location_id',
 			stars: 'stars',
 			answered: 'answered',
+			dismissed: 'dismissed',
 			since: 'since',
 		});
 
@@ -1294,6 +1318,12 @@ async function runBusinessProfileOperation(
 
 	if (operation === 'rejectReply') {
 		return zentriaApiRequest.call(this, 'POST', `${base}/review-replies/${numeric('bpReplyId')}/reject`, {});
+	}
+
+	if (operation === 'dismissReview' || operation === 'restoreReview') {
+		const action = operation === 'dismissReview' ? 'dismiss' : 'restore';
+
+		return zentriaApiRequest.call(this, 'POST', `${base}/reviews/${numeric('bpReviewId')}/${action}`, {});
 	}
 
 	if (operation === 'acceptChange' || operation === 'dismissChange' || operation === 'rejectChange') {

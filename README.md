@@ -37,7 +37,7 @@ The credential test calls `GET /api/public/me`. That response includes the bound
 
 On activate, the node registers an HTTPS webhook on the PAT team (`POST /api/public/webhooks`, `source: n8n`). On deactivate it deletes that endpoint. Duplicate activate with the same URL + events reuses the existing endpoint.
 
-The picker includes sales, CRM (including `crm.campaign.month_closed`), customer, sales notes and activities, todo, **9 Business Profile events** (`business_profile.review.*`, `business_profile.review_reply.*`, `business_profile.location_change.*`, `business_profile.post.*`, `business_profile.account.needs_reauth`), and **13 invoice events** (`invoice.created` through `invoice.cancelled`, plus `invoice.reminder.*`).
+The picker includes sales, CRM (including `crm.campaign.month_closed`), customer, sales notes and activities, todo, **9 Business Profile events** (`business_profile.review.*`, `business_profile.review_reply.*`, `business_profile.location_change.*`, `business_profile.post.*`, `business_profile.account.needs_reauth`), customer events (`customer.created`, `customer.updated`, `customer.archived`, `customer.restored`), campaign events (`campaign.archived`, `campaign.restored`), and **13 invoice events** (`invoice.created` through `invoice.cancelled`, plus `invoice.reminder.*`).
 
 Incoming deliveries are checked with **Standard Webhooks** (`webhook-id`, `webhook-timestamp`, `webhook-signature`) using the secret returned at create time. No npm signing library — HMAC is inline.
 
@@ -47,7 +47,7 @@ n8n Cloud and local test URLs differ. Activate the workflow in the environment t
 
 Resource + operation against `/api/public`. Foreign keys use searchable locators (`q`) so you pick “Discovery call”, not a numeric id.
 
-Minimum operations: deals (get/list/create/update/**move stage**), people/orgs, forms/submissions, pipeline, activities (create/complete), CRM leads (approve/reject), customers, members, todos, Speed to Lead flows, webhooks, and Business Profile (list locations, reviews, review replies, changes and posts; approve or reject a reply; dismiss a review without replying (for reviews Google refuses replies to) or restore it, and filter reviews on dismissed; accept (Google is right), dismiss or reject a change; filter locations on category, each location includes its standard profile; create or delete a post; read-only results of a location: performance and search keywords). Business Profile needs the `business-profiles:read` scope, and `business-profiles:write` for the approve, reject, accept, dismiss, restore, create and delete operations.
+Minimum operations: deals (get/list/create/update/**move stage**), people/orgs, forms/submissions, pipeline, activities (create/complete), CRM leads (approve/reject), customers (including archive, restore and a status filter), members, todos, Speed to Lead flows, webhooks, and Business Profile (list locations, reviews, review replies, changes and posts; approve or reject a reply; dismiss a review without replying (for reviews Google refuses replies to) or restore it, and filter reviews on dismissed; accept (Google is right), dismiss or reject a change; filter locations on category, each location includes its standard profile; create or delete a post; read-only results of a location: performance and search keywords). Business Profile needs the `business-profiles:read` scope, and `business-profiles:write` for the approve, reject, accept, dismiss, restore, create and delete operations.
 
 ## Loop risk
 

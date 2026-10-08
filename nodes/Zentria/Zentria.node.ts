@@ -153,7 +153,7 @@ export class Zentria implements INodeType {
 				name: 'operation',
 				type: 'options',
 				noDataExpression: true,
-				displayOptions: { show: { resource: ['person', 'organization', 'customer'] } },
+				displayOptions: { show: { resource: ['person', 'organization'] } },
 				options: [
 					{ name: 'Create', value: 'create', action: 'Create' },
 					{ name: 'Get', value: 'get', action: 'Get' },
@@ -161,6 +161,40 @@ export class Zentria implements INodeType {
 					{ name: 'Update', value: 'update', action: 'Update' },
 				],
 				default: 'getAll',
+			},
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: { show: { resource: ['customer'] } },
+				options: [
+					{
+						name: 'Archive',
+						value: 'archive',
+						action: 'Archive a customer',
+						description: 'Keep all data but stop invoicing and take the customer out of lists',
+					},
+					{ name: 'Create', value: 'create', action: 'Create a customer' },
+					{ name: 'Get', value: 'get', action: 'Get a customer' },
+					{ name: 'Get Many', value: 'getAll', action: 'List customers' },
+					{ name: 'Restore', value: 'restore', action: 'Restore an archived customer' },
+					{ name: 'Update', value: 'update', action: 'Update a customer' },
+				],
+				default: 'getAll',
+			},
+			{
+				displayName: 'Status',
+				name: 'customerStatus',
+				type: 'options',
+				options: [
+					{ name: 'Active', value: 'active' },
+					{ name: 'Archived', value: 'archived' },
+					{ name: 'All', value: 'all' },
+				],
+				default: 'active',
+				description: 'Which customers to return',
+				displayOptions: { show: { resource: ['customer'], operation: ['getAll'] } },
 			},
 			{
 				displayName: 'Operation',
@@ -344,7 +378,7 @@ export class Zentria implements INodeType {
 			}),
 			locator('Customer', 'customerId', 'searchCustomers', {
 				resource: ['customer'],
-				operation: ['get', 'update'],
+				operation: ['get', 'update', 'archive', 'restore'],
 			}),
 			locator('CRM Lead', 'crmLeadId', 'searchCrmLeads', {
 				resource: ['crmLead'],
@@ -1065,7 +1099,20 @@ async function runOperation(
 
 	if (resource === 'customer') {
 		if (operation === 'getAll') {
-			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/customers', {}, listQs));
+			const status = this.getNodeParameter('customerStatus', index, 'active') as string;
+
+			return collectionItems(
+				await zentriaApiRequest.call(this, 'GET', '/api/public/customers', {}, { ...listQs, status }),
+			);
+		}
+
+		if (operation === 'archive' || operation === 'restore') {
+			return zentriaApiRequest.call(
+				this,
+				'PATCH',
+				`/api/public/customers/${locatorId(this.getNodeParameter('customerId', index))}/${operation}`,
+				{},
+			);
 		}
 
 		if (operation === 'get') {

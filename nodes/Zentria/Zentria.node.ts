@@ -108,6 +108,7 @@ export class Zentria implements INodeType {
 				options: [
 					{ name: 'Activity', value: 'activity' },
 					{ name: 'Business Profile', value: 'businessProfile' },
+					{ name: 'CRM Call', value: 'crmCall' },
 					{ name: 'CRM Lead', value: 'crmLead' },
 					{ name: 'Customer', value: 'customer' },
 					{ name: 'Deal', value: 'deal' },
@@ -226,6 +227,23 @@ export class Zentria implements INodeType {
 				name: 'operation',
 				type: 'options',
 				noDataExpression: true,
+				displayOptions: { show: { resource: ['crmCall'] } },
+				options: [
+					{
+						name: 'Get',
+						value: 'get',
+						action: 'Get a call',
+						description: 'Get one Voys call with transcript, summary and linked lead',
+					},
+					{ name: 'Get Many', value: 'getAll', action: 'List calls' },
+				],
+				default: 'getAll',
+			},
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
 				displayOptions: { show: { resource: ['crmLead'] } },
 				options: [
 					{ name: 'Approve', value: 'approve', action: 'Approve a CRM lead' },
@@ -270,6 +288,11 @@ export class Zentria implements INodeType {
 				displayOptions: { show: { resource: ['stlFlow'] } },
 				options: [
 					{ name: 'Create', value: 'create', action: 'Create a speed to lead flow' },
+					{
+						name: 'Create for Multiple Connections',
+						value: 'createBatch',
+						action: 'Create flows for multiple connections',
+					},
 					{ name: 'Delete', value: 'delete', action: 'Delete a flow' },
 					{ name: 'Get', value: 'get', action: 'Get a flow' },
 					{ name: 'Get Many', value: 'getAll', action: 'List flows' },
@@ -380,6 +403,83 @@ export class Zentria implements INodeType {
 				resource: ['customer'],
 				operation: ['get', 'update', 'archive', 'restore'],
 			}),
+			locator('CRM Call', 'crmCallId', 'searchCrmCalls', {
+				resource: ['crmCall'],
+				operation: ['get'],
+			}),
+			{
+				displayName: 'Call Filters',
+				name: 'crmCallFilters',
+				type: 'collection',
+				placeholder: 'Add Filter',
+				default: {},
+				displayOptions: { show: { resource: ['crmCall'], operation: ['getAll'] } },
+				options: [
+					{
+						displayName: 'Answered',
+						name: 'answered',
+						type: 'boolean',
+						default: true,
+						description: 'Whether to return only answered calls (on) or only calls nobody picked up (off)',
+					},
+					{ displayName: 'Campaign ID', name: 'campaignId', type: 'number', default: 0 },
+					{ displayName: 'Customer ID', name: 'customerId', type: 'number', default: 0 },
+					{
+						displayName: 'Direction',
+						name: 'direction',
+						type: 'options',
+						options: [
+							{ name: 'Incoming', value: 'incoming' },
+							{ name: 'Outgoing', value: 'outgoing' },
+						],
+						default: 'incoming',
+					},
+					{ displayName: 'Lead ID', name: 'leadId', type: 'number', default: 0 },
+					{
+						displayName: 'Outcome',
+						name: 'outcome',
+						type: 'options',
+						options: [
+							{ name: 'Busy', value: 'busy' },
+							{ name: 'Live Conversation', value: 'live_conversation' },
+							{ name: 'Machine', value: 'machine' },
+							{ name: 'Missed (Not Answered)', value: 'missed' },
+							{ name: 'Unavailable', value: 'unavailable' },
+							{ name: 'Voicemail', value: 'voicemail' },
+						],
+						default: 'live_conversation',
+					},
+					{
+						displayName: 'Phone',
+						name: 'phone',
+						type: 'string',
+						default: '',
+						description: 'Partial phone number of the caller or the number called',
+					},
+					{
+						displayName: 'Received After',
+						name: 'receivedAfter',
+						type: 'dateTime',
+						default: '',
+						description: 'Only calls that started at or after this moment',
+					},
+					{
+						displayName: 'Received Before',
+						name: 'receivedBefore',
+						type: 'dateTime',
+						default: '',
+						description: 'Only calls that started at or before this moment',
+					},
+				],
+			},
+			{
+				displayName: 'Return All',
+				name: 'crmCallReturnAll',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to return all results (paged 100 at a time) or only the first 50',
+				displayOptions: { show: { resource: ['crmCall'], operation: ['getAll'] } },
+			},
 			locator('CRM Lead', 'crmLeadId', 'searchCrmLeads', {
 				resource: ['crmLead'],
 				operation: ['get', 'approve', 'reject'],
@@ -417,7 +517,7 @@ export class Zentria implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['person', 'organization', 'customer', 'stlFlow'],
-						operation: ['create', 'update'],
+						operation: ['create', 'createBatch', 'update'],
 					},
 				},
 			},
@@ -451,7 +551,7 @@ export class Zentria implements INodeType {
 				name: 'receivingPhone',
 				type: 'string',
 				default: '',
-				displayOptions: { show: { resource: ['stlFlow'], operation: ['create'] } },
+				displayOptions: { show: { resource: ['stlFlow'], operation: ['create', 'createBatch'] } },
 			},
 			{
 				displayName: 'Customer Integration ID',
@@ -459,6 +559,31 @@ export class Zentria implements INodeType {
 				type: 'string',
 				default: '',
 				displayOptions: { show: { resource: ['stlFlow'], operation: ['create'] } },
+			},
+			{
+				displayName: 'Customer Integration IDs',
+				name: 'customerIntegrationIds',
+				type: 'string',
+				default: '',
+				description:
+					'Comma-separated Elementor connection IDs. Leave empty and fill Campaign ID to use every connection of that campaign.',
+				displayOptions: { show: { resource: ['stlFlow'], operation: ['createBatch'] } },
+			},
+			{
+				displayName: 'Campaign ID',
+				name: 'stlCampaignId',
+				type: 'string',
+				default: '',
+				description: 'Use every Elementor connection of this campaign. Ignored when Customer Integration IDs is filled.',
+				displayOptions: { show: { resource: ['stlFlow'], operation: ['createBatch'] } },
+			},
+			{
+				displayName: 'SMS Template ID',
+				name: 'smsTemplateId',
+				type: 'string',
+				default: '',
+				description: 'SMS template from the team library. Leave empty for the team default.',
+				displayOptions: { show: { resource: ['stlFlow'], operation: ['createBatch'] } },
 			},
 			{
 				displayName: 'Webhook URL',
@@ -835,6 +960,15 @@ export class Zentria implements INodeType {
 			searchCustomers: async function (this: ILoadOptionsFunctions, filter?: string) {
 				return searchCollection(this, '/api/public/customers', filter, ['name']);
 			},
+			searchCrmCalls: async function (this: ILoadOptionsFunctions, filter?: string) {
+				const { modules } = await getMe.call(this);
+
+				if (modules.crm_leads === false) {
+					return { results: [] };
+				}
+
+				return searchCollection(this, '/api/public/crm/calls', filter, ['name', 'fromNumber', 'phone']);
+			},
 			searchCrmLeads: async function (this: ILoadOptionsFunctions, filter?: string) {
 				const { modules } = await getMe.call(this);
 
@@ -884,7 +1018,7 @@ export class Zentria implements INodeType {
 				throw new NodeOperationError(this.getNode(), 'Sales is off for this team. /me.modules.sales_cms is false.');
 			}
 
-			if (resource === 'crmLead' && modules.crm_leads === false) {
+			if ((resource === 'crmLead' || resource === 'crmCall') && modules.crm_leads === false) {
 				throw new NodeOperationError(this.getNode(), 'CRM leads is off for this team. /me.modules.crm_leads is false.');
 			}
 
@@ -1077,6 +1211,50 @@ async function runOperation(
 		}
 	}
 
+	if (resource === 'crmCall') {
+		if (operation === 'get') {
+			return zentriaApiRequest.call(this, 'GET', `/api/public/crm/calls/${locatorId(this.getNodeParameter('crmCallId', index))}`);
+		}
+
+		if (operation === 'getAll') {
+			const filters = this.getNodeParameter('crmCallFilters', index, {}) as IDataObject;
+			const qs: IDataObject = {
+				...businessProfileQuery(filters, {
+					customerId: 'customerId',
+					campaignId: 'campaignId',
+					leadId: 'leadId',
+					outcome: 'outcome',
+					direction: 'direction',
+					phone: 'phone',
+					receivedAfter: 'receivedAt[after]',
+					receivedBefore: 'receivedAt[before]',
+				}),
+				...(typeof filters.answered === 'boolean' ? { answered: filters.answered } : {}),
+				...(listQs.q ? { q: listQs.q } : {}),
+			};
+
+			if (!this.getNodeParameter('crmCallReturnAll', index, false)) {
+				return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/crm/calls', {}, qs));
+			}
+
+			const perPage = 100;
+			const all: IDataObject[] = [];
+
+			for (let page = 1; page <= 100; page++) {
+				const items = collectionItems(
+					await zentriaApiRequest.call(this, 'GET', '/api/public/crm/calls', {}, { ...qs, itemsPerPage: perPage, page }),
+				);
+				all.push(...items);
+
+				if (items.length < perPage) {
+					break;
+				}
+			}
+
+			return all;
+		}
+	}
+
 	if (resource === 'crmLead') {
 		if (operation === 'getAll') {
 			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/crm/leads', {}, listQs));
@@ -1193,6 +1371,32 @@ async function runOperation(
 				receivingPhone: this.getNodeParameter('receivingPhone', index),
 				customerIntegrationId: this.getNodeParameter('customerIntegrationId', index),
 			});
+		}
+
+		if (operation === 'createBatch') {
+			const integrationIds = String(this.getNodeParameter('customerIntegrationIds', index, ''))
+				.split(',')
+				.map((value) => Number.parseInt(value.trim(), 10))
+				.filter((value) => Number.isInteger(value) && value > 0);
+			const campaignId = Number.parseInt(String(this.getNodeParameter('stlCampaignId', index, '')).trim(), 10);
+			const smsTemplateId = Number.parseInt(String(this.getNodeParameter('smsTemplateId', index, '')).trim(), 10);
+
+			const body: IDataObject = {
+				name: this.getNodeParameter('name', index),
+				receivingPhone: this.getNodeParameter('receivingPhone', index),
+			};
+
+			if (integrationIds.length > 0) {
+				body.customerIntegrationIds = integrationIds;
+			} else if (Number.isInteger(campaignId) && campaignId > 0) {
+				body.campaignId = campaignId;
+			}
+
+			if (Number.isInteger(smsTemplateId) && smsTemplateId > 0) {
+				body.smsTemplateId = smsTemplateId;
+			}
+
+			return zentriaApiRequest.call(this, 'POST', '/api/public/stl/flows/batch', body);
 		}
 
 		if (operation === 'delete') {

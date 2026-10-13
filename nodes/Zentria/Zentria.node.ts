@@ -10,6 +10,8 @@ import type {
 } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 
+import { AREA_RESOURCES } from './areas';
+import { executeArea, findResource, moduleMessage, withAreas } from './areas/engine';
 import {
 	SALES_ACTIVITY_TYPES,
 	collectionItems,
@@ -99,7 +101,7 @@ export class Zentria implements INodeType {
 				required: true,
 			},
 		],
-		properties: [
+		properties: withAreas([
 			{
 				displayName: 'Resource',
 				name: 'resource',
@@ -110,6 +112,7 @@ export class Zentria implements INodeType {
 					{ name: 'Business Profile', value: 'businessProfile' },
 					{ name: 'CRM Call', value: 'crmCall' },
 					{ name: 'CRM Lead', value: 'crmLead' },
+					{ name: 'CRM Lead Value Category', value: 'crmLeadValueCategory' },
 					{ name: 'Customer', value: 'customer' },
 					{ name: 'Deal', value: 'deal' },
 					{ name: 'Form', value: 'form' },
@@ -250,6 +253,22 @@ export class Zentria implements INodeType {
 					{ name: 'Get', value: 'get', action: 'Get a CRM lead' },
 					{ name: 'Get Many', value: 'getAll', action: 'List CRM leads' },
 					{ name: 'Reject', value: 'reject', action: 'Reject a CRM lead' },
+				],
+				default: 'getAll',
+			},
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: { show: { resource: ['crmLeadValueCategory'] } },
+				options: [
+					{
+						name: 'Get Many',
+						value: 'getAll',
+						action: 'List lead value categories',
+						description: 'The tariffs per lead value category in euro cents, including the default for other',
+					},
 				],
 				default: 'getAll',
 			},
@@ -484,6 +503,86 @@ export class Zentria implements INodeType {
 				resource: ['crmLead'],
 				operation: ['get', 'approve', 'reject'],
 			}),
+			{
+				displayName: 'Reason',
+				name: 'crmLeadRejectReason',
+				type: 'string',
+				default: 'Rejected via n8n',
+				description: 'Why the lead is rejected. Zentria requires a reason, it is shown in the lead history.',
+				displayOptions: { show: { resource: ['crmLead'], operation: ['reject'] } },
+			},
+			{
+				displayName: 'Lead Filters',
+				name: 'crmLeadFilters',
+				type: 'collection',
+				placeholder: 'Add Filter',
+				default: {},
+				displayOptions: { show: { resource: ['crmLead'], operation: ['getAll'] } },
+				options: [
+					{ displayName: 'Campaign ID', name: 'campaignId', type: 'number', default: 0 },
+					{ displayName: 'Customer ID', name: 'customerId', type: 'number', default: 0 },
+					{
+						displayName: 'First Seen After',
+						name: 'firstSeenAfter',
+						type: 'dateTime',
+						default: '',
+						description: 'Only leads first seen at or after this moment',
+					},
+					{
+						displayName: 'First Seen Before',
+						name: 'firstSeenBefore',
+						type: 'dateTime',
+						default: '',
+						description: 'Only leads first seen at or before this moment',
+					},
+					{
+						displayName: 'Invoiced',
+						name: 'invoiced',
+						type: 'boolean',
+						default: true,
+						description: 'Whether to return only leads on an invoice (on) or only leads not yet invoiced (off)',
+					},
+					{
+						displayName: 'Lead Value Category',
+						name: 'leadValueCategory',
+						type: 'string',
+						default: '',
+						description:
+							'Category key from the CRM Lead Value Category resource, or unclassified (no value yet) or other (classified without a category)',
+					},
+					{
+						displayName: 'Review Status',
+						name: 'reviewStatus',
+						type: 'options',
+						options: [
+							{ name: 'Approved', value: 'approved' },
+							{ name: 'Open', value: 'open' },
+							{ name: 'Reclamation', value: 'reclamation' },
+							{ name: 'Rejected', value: 'rejected' },
+						],
+						default: 'approved',
+					},
+					{
+						displayName: 'Source',
+						name: 'source',
+						type: 'options',
+						options: [
+							{ name: 'Form (Elementor)', value: 'elementor' },
+							{ name: 'Mail', value: 'mail' },
+							{ name: 'Phone (Voys)', value: 'voys' },
+						],
+						default: 'elementor',
+					},
+				],
+			},
+			{
+				displayName: 'Return All',
+				name: 'crmLeadReturnAll',
+				type: 'boolean',
+				default: false,
+				description: 'Whether to return all results (paged 100 at a time) or only the first 50',
+				displayOptions: { show: { resource: ['crmLead'], operation: ['getAll'] } },
+			},
 			locator('Member', 'memberId', 'searchMembers', {
 				resource: ['member'],
 				operation: ['changeRole'],
@@ -888,7 +987,7 @@ export class Zentria implements INodeType {
 				default: true,
 				displayOptions: { show: { resource: ['todo'], operation: ['update'] } },
 			},
-		],
+		], AREA_RESOURCES),
 	};
 
 	methods = {
@@ -1018,7 +1117,10 @@ export class Zentria implements INodeType {
 				throw new NodeOperationError(this.getNode(), 'Sales is off for this team. /me.modules.sales_cms is false.');
 			}
 
-			if ((resource === 'crmLead' || resource === 'crmCall') && modules.crm_leads === false) {
+			if (
+				(resource === 'crmLead' || resource === 'crmLeadValueCategory' || resource === 'crmCall') &&
+				modules.crm_leads === false
+			) {
 				throw new NodeOperationError(this.getNode(), 'CRM leads is off for this team. /me.modules.crm_leads is false.');
 			}
 
@@ -1035,6 +1137,12 @@ export class Zentria implements INodeType {
 					this.getNode(),
 					'Business Profiles is off for this team. /me.modules.business_profiles is false.',
 				);
+			}
+
+			const area = findResource(AREA_RESOURCES, resource);
+
+			if (area?.module && modules[area.module] === false) {
+				throw new NodeOperationError(this.getNode(), moduleMessage(area.module));
 			}
 
 			const response = await runOperation.call(this, resource, operation, i);
@@ -1057,6 +1165,12 @@ async function runOperation(
 
 	if (resource === 'me' && operation === 'get') {
 		return zentriaApiRequest.call(this, 'GET', '/api/public/me');
+	}
+
+	const area = findResource(AREA_RESOURCES, resource);
+
+	if (area?.operations.some((candidate) => candidate.value === operation)) {
+		return executeArea.call(this, area, operation, index);
 	}
 
 	if (resource === 'deal') {
@@ -1255,9 +1369,46 @@ async function runOperation(
 		}
 	}
 
+	if (resource === 'crmLeadValueCategory' && operation === 'getAll') {
+		return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/crm/lead-value-categories'));
+	}
+
 	if (resource === 'crmLead') {
 		if (operation === 'getAll') {
-			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/crm/leads', {}, listQs));
+			const filters = this.getNodeParameter('crmLeadFilters', index, {}) as IDataObject;
+			const qs: IDataObject = {
+				...businessProfileQuery(filters, {
+					customerId: 'customerId',
+					campaignId: 'campaignId',
+					reviewStatus: 'reviewStatus',
+					source: 'source',
+					leadValueCategory: 'leadValueCategory',
+					firstSeenAfter: 'firstSeenAt[after]',
+					firstSeenBefore: 'firstSeenAt[before]',
+				}),
+				...(typeof filters.invoiced === 'boolean' ? { invoiced: filters.invoiced } : {}),
+				...(listQs.q ? { q: listQs.q } : {}),
+			};
+
+			if (!this.getNodeParameter('crmLeadReturnAll', index, false)) {
+				return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/crm/leads', {}, qs));
+			}
+
+			const perPage = 100;
+			const all: IDataObject[] = [];
+
+			for (let page = 1; page <= 100; page++) {
+				const items = collectionItems(
+					await zentriaApiRequest.call(this, 'GET', '/api/public/crm/leads', {}, { ...qs, itemsPerPage: perPage, page }),
+				);
+				all.push(...items);
+
+				if (items.length < perPage) {
+					break;
+				}
+			}
+
+			return all;
 		}
 
 		if (operation === 'get') {
@@ -1271,7 +1422,9 @@ async function runOperation(
 		}
 
 		if (operation === 'reject') {
-			return zentriaApiRequest.call(this, 'POST', `/api/public/crm/leads/${leadId}/reject`, {});
+			return zentriaApiRequest.call(this, 'POST', `/api/public/crm/leads/${leadId}/reject`, {
+				reason: this.getNodeParameter('crmLeadRejectReason', index, 'Rejected via n8n'),
+			});
 		}
 	}
 

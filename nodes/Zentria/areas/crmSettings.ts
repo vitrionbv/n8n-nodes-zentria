@@ -12,6 +12,7 @@ const categoryKey: ParamSpec = {
 const dashboardRanges = [
 	{ name: 'Today', value: 'today' },
 	{ name: 'This Month (Default)', value: 'month' },
+	{ name: 'Previous Month', value: 'previous_month' },
 	{ name: 'Last 7 Days', value: '7' },
 	{ name: 'Last 14 Days', value: '14' },
 	{ name: 'Last 30 Days', value: '30' },
@@ -298,11 +299,7 @@ export const crmSettingsResources: ResourceSpec[] = [
 					{
 						name: 'range',
 						kind: 'options',
-						options: [
-							...dashboardRanges.slice(0, 2),
-							{ name: 'Previous Month', value: 'previous_month' },
-							...dashboardRanges.slice(2),
-						],
+						options: dashboardRanges,
 						default: 'month',
 						description: 'Period of the report',
 					},

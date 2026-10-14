@@ -276,6 +276,18 @@ export const crmSettingsResources: ResourceSpec[] = [
 					},
 					{ name: 'search', kind: 'string', description: 'Search by customer name' },
 					{ name: 'label', kind: 'string', description: 'Only customers with this label' },
+					{
+						name: 'service',
+						kind: 'options',
+						options: [
+							{ name: 'Business Profile', value: 'business_profile' },
+							{ name: 'Phone Tracking', value: 'phone_tracking' },
+							{ name: 'SEO', value: 'seo' },
+							{ name: 'Website', value: 'website' },
+						],
+						default: 'website',
+						description: 'Only campaigns with this service, and customers with at least one such campaign',
+					},
 				],
 			},
 		],

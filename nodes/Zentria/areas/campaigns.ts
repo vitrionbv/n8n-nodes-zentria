@@ -26,7 +26,22 @@ const amountParams: ParamSpec[] = [
 		name: 'missingPhoneSharePct',
 		displayName: 'Missing Phone Share (%)',
 		kind: 'number',
-		description: 'Share of calls that cannot be measured because there is no Voys number, 1 to 99. Lowers the monthly target',
+		description: 'Share of calls that cannot be measured because there is no phone tracking, 1 to 99. Lowers the monthly target',
+	},
+	{
+		name: 'services',
+		kind: 'json',
+		default: '{}',
+		description:
+			'Services the campaign takes, for example {"website": true, "seo": false, "businessProfile": true, "phoneTracking": true}. Only the services you pass change. Turning one off is refused while it still has connections',
+	},
+	{
+		name: 'phoneSubscription',
+		displayName: 'Phone Subscription',
+		kind: 'json',
+		default: '{}',
+		description:
+			'Only with phone tracking: {"amountCents": 2500, "startsOn": "2026-10-01", "endsOn": null}. Separate from the monthly amount, not part of the goal',
 	},
 ];
 
@@ -90,7 +105,7 @@ export const campaignResources: ResourceSpec[] = [
 				value: 'getAll',
 				name: 'Get Many',
 				action: 'List campaigns',
-				description: 'Campaigns of the team with lead counts and amounts. Scope campaigns:read.',
+				description: 'Campaigns of the team with lead counts, amounts and services. Scope campaigns:read.',
 				method: 'GET',
 				path: '/api/public/campaigns',
 				list: true,
@@ -106,6 +121,11 @@ export const campaignResources: ResourceSpec[] = [
 							{ name: 'Archived', value: 'archived' },
 						],
 						default: 'active',
+					},
+					{
+						name: 'services',
+						kind: 'string',
+						description: 'Comma separated services the campaign must all take: website, seo, business_profile, phone_tracking',
 					},
 					{
 						name: 'splitCandidates',
@@ -218,7 +238,8 @@ export const campaignResources: ResourceSpec[] = [
 				value: 'update',
 				name: 'Update',
 				action: 'Update a campaign',
-				description: 'Change the name, amounts and optionally the lead value categories. Fields you leave empty stay as they are. Scope campaigns:write',
+				description:
+					'Change the name, amounts, services, phone subscription and optionally the lead value categories. Fields you leave empty stay as they are. Scope campaigns:write',
 				method: 'PUT',
 				path: '/api/public/campaigns/{id}',
 				params: [

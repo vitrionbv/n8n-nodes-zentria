@@ -1,6 +1,7 @@
 import type { ResourceSpec } from './engine';
 import { businessProfileAdminResources } from './businessProfileAdmin';
 import { campaignResources } from './campaigns';
+import { communiqateResources } from './communiqate';
 import { connectionResources } from './connections';
 import { crmLeadResources } from './crmLeads';
 import { crmSettingsResources } from './crmSettings';
@@ -41,6 +42,7 @@ function mergeResources(resources: ResourceSpec[]): ResourceSpec[] {
 const ALL_RESOURCES: ResourceSpec[] = [
 	...businessProfileAdminResources,
 	...campaignResources,
+	...communiqateResources,
 	...connectionResources,
 	...crmLeadResources,
 	...crmSettingsResources,

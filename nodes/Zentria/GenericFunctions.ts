@@ -14,6 +14,7 @@ export type ZentriaModules = {
 	speed_to_lead?: boolean;
 	todos?: boolean;
 	business_profiles?: boolean;
+	communiqate?: boolean;
 };
 
 export function normalizeBaseUrl(raw: string): string {
@@ -234,4 +235,11 @@ export const ZENTRIA_EVENTS = [
 	{ name: 'Business Profile post published', value: 'business_profile.post.published' },
 	{ name: 'Business Profile post failed', value: 'business_profile.post.failed' },
 	{ name: 'Business Profile account needs re-authorization', value: 'business_profile.account.needs_reauth' },
+	{ name: 'CommuniQate WhatsApp message received', value: 'communiqate.message.received' },
+	{ name: 'CommuniQate WhatsApp message sent', value: 'communiqate.message.sent' },
+	{ name: 'CommuniQate WhatsApp message status updated', value: 'communiqate.message.status_updated' },
+	{ name: 'CommuniQate WhatsApp template created', value: 'communiqate.template.created' },
+	{ name: 'CommuniQate WhatsApp template status changed', value: 'communiqate.template.status_changed' },
+	{ name: 'CommuniQate WhatsApp template category changed', value: 'communiqate.template.category_changed' },
+	{ name: 'CommuniQate WhatsApp template deleted', value: 'communiqate.template.deleted' },
 ];

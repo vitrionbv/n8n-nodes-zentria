@@ -14,7 +14,7 @@ import { collectionItems, locatorId, zentriaApiRequest } from '../GenericFunctio
  * operations: use the same `value` and the new operations are appended to its Operation list.
  */
 
-export type ModuleKey = 'sales_cms' | 'crm_leads' | 'speed_to_lead' | 'todos' | 'business_profiles';
+export type ModuleKey = 'sales_cms' | 'crm_leads' | 'speed_to_lead' | 'todos' | 'business_profiles' | 'communiqate';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -73,6 +73,7 @@ const MODULE_LABELS: Record<ModuleKey, string> = {
 	speed_to_lead: 'Speed to lead',
 	todos: 'Todos',
 	business_profiles: 'Business Profiles',
+	communiqate: 'CommuniQate (connect it on the team CommuniQate tab in Zentria)',
 };
 
 function capitalize(value: string): string {

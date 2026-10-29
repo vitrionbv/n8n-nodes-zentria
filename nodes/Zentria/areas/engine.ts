@@ -23,15 +23,23 @@ export interface ParamSpec {
 	name: string;
 	/** Label in the n8n UI. Defaults to the name in Title Case. */
 	displayName?: string;
-	kind: 'string' | 'number' | 'boolean' | 'options' | 'dateTime' | 'json';
+	/**
+	 * `emailList`: a comma separated text field, sent as an array of trimmed addresses.
+	 * `keyValue`: key/value pairs in the UI, sent as one object.
+	 */
+	kind: 'string' | 'number' | 'boolean' | 'options' | 'dateTime' | 'json' | 'emailList' | 'keyValue';
 	/** Required params are always shown. Optional params sit under "Options" and are only sent when filled. */
 	required?: boolean;
+	/** Show an optional param at the top instead of under "Options". It is still only sent when filled. */
+	alwaysShow?: boolean;
 	/** Where the value goes. Default: path when the path has the placeholder, else query for GET and body for other methods. */
-	in?: 'path' | 'query' | 'body';
+	in?: 'path' | 'query' | 'body' | 'header';
 	/** Mask the value in the n8n UI (passwords, API keys). Write-only secrets must set this. */
 	secret?: boolean;
 	/** For `type: 'options'`. */
 	options?: Array<{ name: string; value: string | number | boolean }>;
+	/** For `kind: 'options'`: a method in `methods.loadOptions` of the node that fills the dropdown. An empty value is not sent. */
+	loadOptionsMethod?: string;
 	default?: string | number | boolean;
 	description?: string;
 	/**
@@ -92,7 +100,7 @@ function pathPlaceholders(path: string): string[] {
 	return Array.from(path.matchAll(/\{(\w+)\}/g), (match) => match[1]);
 }
 
-function paramTarget(spec: OperationSpec, param: ParamSpec): 'path' | 'query' | 'body' {
+function paramTarget(spec: OperationSpec, param: ParamSpec): 'path' | 'query' | 'body' | 'header' {
 	if (param.in) {
 		return param.in;
 	}
@@ -119,7 +127,7 @@ function defaultFor(param: ParamSpec): string | number | boolean {
 		case 'boolean':
 			return false;
 		case 'options':
-			return param.options?.[0]?.value ?? '';
+			return param.loadOptionsMethod ? '' : (param.options?.[0]?.value ?? '');
 		default:
 			return '';
 	}
@@ -142,7 +150,34 @@ function baseProperty(spec: OperationSpec, param: ParamSpec, name: string): INod
 			return { ...common, type: 'dateTime' };
 		case 'json':
 			return { ...common, type: 'json', default: (param.default as string | undefined) ?? '{}' };
+		case 'keyValue':
+			return {
+				...common,
+				type: 'fixedCollection',
+				default: {},
+				placeholder: 'Add Value',
+				typeOptions: { multipleValues: true },
+				options: [
+					{
+						displayName: 'Value',
+						name: 'values',
+						values: [
+							{ displayName: 'Key', name: 'key', type: 'string', default: '' },
+							{ displayName: 'Value', name: 'value', type: 'string', default: '' },
+						],
+					},
+				],
+			};
 		case 'options':
+			if (param.loadOptionsMethod) {
+				return {
+					...common,
+					type: 'options',
+					typeOptions: { loadOptionsMethod: param.loadOptionsMethod },
+					options: [],
+				};
+			}
+
 			return {
 				...common,
 				type: 'options',
@@ -191,7 +226,9 @@ function operationProperties(resource: string, spec: OperationSpec): INodeProper
 	for (const param of spec.params ?? []) {
 		const name = propertyName(resource, spec.value, param.name);
 
-		if (isRequired(spec, param)) {
+		if (param.alwaysShow && !isRequired(spec, param)) {
+			properties.push({ ...baseProperty(spec, param, name), displayOptions: { show } });
+		} else if (isRequired(spec, param)) {
 			properties.push(
 				param.locator
 					? locatorProperty(param, name, show)
@@ -319,7 +356,9 @@ function readValue(
 	const name = propertyName(resource, spec.value, param.name);
 	const raw = isRequired(spec, param)
 		? context.getNodeParameter(name, index)
-		: options[name];
+		: param.alwaysShow
+			? context.getNodeParameter(name, index, defaultFor(param))
+			: options[name];
 
 	if (raw === undefined || raw === null) {
 		return undefined;
@@ -327,6 +366,34 @@ function readValue(
 
 	if (param.locator) {
 		return locatorId(raw as never);
+	}
+
+	if (param.kind === 'emailList') {
+		const list = String(raw)
+			.split(',')
+			.map((item) => item.trim())
+			.filter((item) => item !== '');
+
+		return list.length > 0 || isRequired(spec, param) ? list : undefined;
+	}
+
+	if (param.kind === 'keyValue') {
+		const pairs = ((raw as IDataObject).values ?? []) as Array<{ key?: string; value?: unknown }>;
+		const object: IDataObject = {};
+
+		for (const pair of pairs) {
+			const key = String(pair.key ?? '').trim();
+
+			if (key !== '') {
+				object[key] = pair.value as never;
+			}
+		}
+
+		return Object.keys(object).length > 0 ? object : undefined;
+	}
+
+	if (param.loadOptionsMethod && raw === '') {
+		return undefined;
 	}
 
 	if (param.kind === 'json') {
@@ -375,6 +442,7 @@ export async function executeArea(
 	let path = spec.path;
 	const query: IDataObject = {};
 	const body: IDataObject = {};
+	const headers: IDataObject = {};
 
 	for (const param of spec.params ?? []) {
 		const value = readValue(this, resource.value, spec, param, index, options);
@@ -389,13 +457,15 @@ export async function executeArea(
 			path = path.replace(`{${param.name}}`, encodeURIComponent(String(value)));
 		} else if (target === 'query') {
 			query[param.name] = value as never;
+		} else if (target === 'header') {
+			headers[param.name] = String(value);
 		} else {
 			body[param.name] = value as never;
 		}
 	}
 
 	if (!spec.list) {
-		const response = await zentriaApiRequest.call(this, spec.method, path, body, query);
+		const response = await zentriaApiRequest.call(this, spec.method, path, body, query, headers);
 
 		// Deletes and some actions answer 204 without a body.
 		return response !== null && typeof response === 'object' ? response : { ok: true };

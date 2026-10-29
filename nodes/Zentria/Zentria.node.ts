@@ -5,6 +5,7 @@ import type {
 	INodeExecutionData,
 	INodeListSearchItems,
 	INodeProperties,
+	INodePropertyOptions,
 	INodeType,
 	INodeTypeDescription,
 } from 'n8n-workflow';
@@ -53,6 +54,17 @@ function locator(
 			},
 		],
 	};
+}
+
+async function mailAccountOptions(ctx: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+	const accounts = collectionItems(
+		await zentriaApiRequest.call(ctx, 'GET', '/api/public/mail/accounts', {}, { itemsPerPage: 100 }),
+	);
+
+	return accounts.map((account) => ({
+		name: `${String(account.name ?? account.fromAddress ?? account.id)} (${String(account.fromAddress ?? '')})`,
+		value: Number(account.id),
+	}));
 }
 
 async function searchCollection(
@@ -991,6 +1003,14 @@ export class Zentria implements INodeType {
 	};
 
 	methods = {
+		loadOptions: {
+			getMailAccounts: async function (this: ILoadOptionsFunctions) {
+				return [{ name: 'Default Account', value: '' }, ...(await mailAccountOptions(this))];
+			},
+			getMailAccountFilter: async function (this: ILoadOptionsFunctions) {
+				return mailAccountOptions(this);
+			},
+		},
 		listSearch: {
 			searchDeals: async function (this: ILoadOptionsFunctions, filter?: string) {
 				const { modules } = await getMe.call(this);

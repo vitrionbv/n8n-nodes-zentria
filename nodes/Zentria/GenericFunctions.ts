@@ -27,6 +27,7 @@ export async function zentriaApiRequest(
 	path: string,
 	body: IDataObject = {},
 	qs: IDataObject = {},
+	headers: IDataObject = {},
 ): Promise<IDataObject> {
 	const credentials = await this.getCredentials('zentriaApi');
 	const base = normalizeBaseUrl(String(credentials.baseUrl ?? ''));
@@ -37,6 +38,7 @@ export async function zentriaApiRequest(
 		qs,
 		json: true,
 		headers: {
+			...headers,
 			Accept: 'application/json',
 		},
 	};
@@ -242,4 +244,6 @@ export const ZENTRIA_EVENTS = [
 	{ name: 'CommuniQate WhatsApp template status changed', value: 'communiqate.template.status_changed' },
 	{ name: 'CommuniQate WhatsApp template category changed', value: 'communiqate.template.category_changed' },
 	{ name: 'CommuniQate WhatsApp template deleted', value: 'communiqate.template.deleted' },
+	{ name: 'Mail sent', value: 'mail.sent' },
+	{ name: 'Mail failed', value: 'mail.failed' },
 ];

@@ -7,6 +7,7 @@ import { crmLeadResources } from './crmLeads';
 import { crmSettingsResources } from './crmSettings';
 import { customerAdminResources } from './customerAdmin';
 import { invoiceResources } from './invoices';
+import { mailResources } from './mail';
 import { salesAdminResources } from './salesAdmin';
 import { teamAdminResources } from './teamAdmin';
 
@@ -48,6 +49,7 @@ const ALL_RESOURCES: ResourceSpec[] = [
 	...crmSettingsResources,
 	...customerAdminResources,
 	...invoiceResources,
+	...mailResources,
 	...salesAdminResources,
 	...teamAdminResources,
 ];

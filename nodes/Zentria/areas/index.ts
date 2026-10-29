@@ -9,6 +9,7 @@ import { customerAdminResources } from './customerAdmin';
 import { invoiceResources } from './invoices';
 import { mailResources } from './mail';
 import { salesAdminResources } from './salesAdmin';
+import { statusResources } from './status';
 import { teamAdminResources } from './teamAdmin';
 
 /**
@@ -51,6 +52,7 @@ const ALL_RESOURCES: ResourceSpec[] = [
 	...invoiceResources,
 	...mailResources,
 	...salesAdminResources,
+	...statusResources,
 	...teamAdminResources,
 ];
 

@@ -382,6 +382,31 @@ export class Zentria implements INodeType {
 				default: '',
 				displayOptions: { show: { operation: ['getAll', 'getLocations', 'getSearchKeywords'] } },
 			},
+			{
+				displayName: 'Filters',
+				name: 'dealFilters',
+				type: 'collection',
+				placeholder: 'Add Filter',
+				default: {},
+				displayOptions: { show: { resource: ['deal'], operation: ['getAll'] } },
+				options: [
+					{
+						displayName: 'Pipeline ID',
+						name: 'pipelineId',
+						type: 'number',
+						default: 0,
+						description: 'Only deals of this pipeline',
+					},
+					{
+						displayName: 'Stage ID',
+						name: 'stageId',
+						type: 'number',
+						default: 0,
+						description:
+							'Only deals in this stage. Each deal has stageChangedAt and lastActivityAt, so a flow can find deals that sat in one stage without contact.',
+					},
+				],
+			},
 			locator('Deal', 'dealId', 'searchDeals', {
 				resource: ['deal'],
 				operation: ['get', 'update', 'moveStage'],
@@ -1195,7 +1220,16 @@ async function runOperation(
 
 	if (resource === 'deal') {
 		if (operation === 'getAll') {
-			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/sales/deals', {}, listQs));
+			const filters = this.getNodeParameter('dealFilters', index, {}) as IDataObject;
+			const qs: IDataObject = { ...listQs };
+
+			for (const key of ['pipelineId', 'stageId']) {
+				if (typeof filters[key] === 'number' && (filters[key] as number) > 0) {
+					qs[key] = filters[key];
+				}
+			}
+
+			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/sales/deals', {}, qs));
 		}
 
 		if (operation === 'get') {

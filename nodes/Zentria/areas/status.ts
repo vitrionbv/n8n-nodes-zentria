@@ -93,10 +93,23 @@ export const statusResources: ResourceSpec[] = [
 				name: 'Start Grid Run',
 				action: 'Start a grid measurement',
 				description:
-					'Measure the grid now, one run per keyword. Every point is a paid DataForSEO search within the team budget. Refused when a run is still open or the budget would be exceeded. Scope business-profiles-admin:write.',
+					'Measure the grid now, one run per keyword. Every point is a paid DataForSEO search within the team budget: Fast (live, about 20 seconds, about $0.002 per point) or Cheap (DataForSEO queue, a few minutes, about $0.0006 per point). Refused when a run is still open or the budget would be exceeded. Scope business-profiles-admin:write.',
 				method: 'POST',
 				path: `${BASE}/business-profiles/locations/{locationId}/grid/run`,
-				params: [locationId],
+				params: [
+					locationId,
+					{
+						name: 'mode',
+						displayName: 'Speed',
+						kind: 'options',
+						options: [
+							{ name: 'Fast (Live, About 20 Seconds)', value: 'live' },
+							{ name: 'Cheap (Queue, a Few Minutes)', value: 'standard' },
+						],
+						default: 'live',
+						description: 'Fast costs about $0.002 per point, Cheap about $0.0006 per point',
+					},
+				],
 			},
 			{
 				value: 'getServicePushes',

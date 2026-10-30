@@ -83,7 +83,7 @@ export const statusResources: ResourceSpec[] = [
 				value: 'getGrid',
 				name: 'Get Grid',
 				action: 'Get the grid rank tracking of a location',
-				description: 'Grid settings, budget and the latest grid score per keyword with the score before it and the trend. Scope business-profiles:read.',
+				description: 'Grid settings, budget, the cost of every choice and the latest grid score per keyword and source (Google Search or Google Maps) with the score before it and the trend. Scope business-profiles:read.',
 				method: 'GET',
 				path: `${BASE}/business-profiles/locations/{locationId}/grid`,
 				params: [locationId],
@@ -93,7 +93,7 @@ export const statusResources: ResourceSpec[] = [
 				name: 'Start Grid Run',
 				action: 'Start a grid measurement',
 				description:
-					'Measure the grid now, one run per keyword. Every point is a paid DataForSEO search within the team budget: Fast (live, about 20 seconds, about $0.002 per point) or Cheap (DataForSEO queue, a few minutes, about $0.0006 per point). Refused when a run is still open or the budget would be exceeded. Scope business-profiles-admin:write.',
+					'Measure the grid now, one run per keyword, in Google Search on mobile (default, top 15, of which the top 3 is the local block) or Google Maps (top 100). Every point is a paid DataForSEO search within the team budget: Fast (live, about 20 seconds, about $0.002 per point) or Cheap (DataForSEO queue, a few minutes, about $0.0006 per point). Search top 15 costs twice that, because DataForSEO bills Search per 10 places rounded up; Search top 10 costs the same as Maps. Refused when a run is still open or the budget would be exceeded. Scope business-profiles-admin:write.',
 				method: 'POST',
 				path: `${BASE}/business-profiles/locations/{locationId}/grid/run`,
 				params: [
@@ -108,6 +108,29 @@ export const statusResources: ResourceSpec[] = [
 						],
 						default: 'live',
 						description: 'Fast costs about $0.002 per point, Cheap about $0.0006 per point',
+					},
+					{
+						name: 'source',
+						displayName: 'Source',
+						kind: 'options',
+						options: [
+							{ name: 'Google Search (Mobile)', value: 'search' },
+							{ name: 'Google Maps', value: 'maps' },
+						],
+						default: 'search',
+						description: 'Google Search is where most people search. Scores of the two sources do not compare.',
+					},
+					{
+						name: 'depth',
+						displayName: 'Search Depth',
+						kind: 'options',
+						options: [
+							{ name: 'Top 15', value: 15 },
+							{ name: 'Top 10 (Half the Price)', value: 10 },
+							{ name: 'Top 20 (Same Price as 15)', value: 20 },
+						],
+						default: 15,
+						description: 'Only for Google Search. Google Maps always looks 100 deep.',
 					},
 				],
 			},
@@ -140,7 +163,7 @@ export const statusResources: ResourceSpec[] = [
 				value: 'getAll',
 				name: 'Get Many',
 				action: 'List grid runs',
-				description: 'Grid measurements of the team, newest first. Scope business-profiles:read.',
+				description: 'Grid measurements of the team, newest first, each with its source (search or maps). Scope business-profiles:read.',
 				method: 'GET',
 				path: `${BASE}/business-profiles/grid-runs`,
 				list: true,
@@ -149,6 +172,15 @@ export const statusResources: ResourceSpec[] = [
 					{ name: 'campaignId', displayName: 'Campaign ID', kind: 'number' },
 					{ name: 'customerId', displayName: 'Customer ID', kind: 'number' },
 					{ name: 'keyword', kind: 'string', description: 'Exact keyword, case insensitive' },
+					{
+						name: 'source',
+						kind: 'options',
+						default: 'search',
+						options: [
+							{ name: 'Google Search', value: 'search' },
+							{ name: 'Google Maps', value: 'maps' },
+						],
+					},
 					{
 						name: 'status',
 						kind: 'options',

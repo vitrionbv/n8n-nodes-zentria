@@ -63,12 +63,12 @@ export const invoiceResources: ResourceSpec[] = [
 				params: [invoiceId],
 			},
 			action('ready', 'Mark Ready', 'Mark an invoice as ready', 'Refused before the billing moment of its week or when it is no longer a draft'),
-			action('cancel', 'Cancel', 'Cancel an invoice', 'Cancels the Mollie sales invoice and releases the leads', [
+			action('cancel', 'Cancel', 'Cancel an invoice', 'Only for a sent or overdue invoice. Zentria then issues a replacement invoice for the same week with the approved leads, so they are billed again. Use Skip Collection to drop an invoice without billing its leads again', [
 				{ name: 'reason', kind: 'string' },
 			]),
 			action('chargedBack', 'Mark Charged Back', 'Mark an invoice as charged back', 'Refused for a draft or an invoice that was never collected'),
 			action('collect', 'Collect', 'Collect an invoice', 'Starts or retries the collection of a ready, failed or sent invoice'),
-			action('skipCollection', 'Skip Collection', 'Keep an invoice out of the automatic collection', 'Needs the invoices:write scope'),
+			action('skipCollection', 'Skip Collection', 'Keep an invoice out of the automatic collection', 'The invoice is not issued or collected, and its leads stay on it, so they are not billed later either. Needs the invoices:write scope'),
 			action('unskipCollection', 'Unskip Collection', 'Put an invoice back in the automatic collection', 'Needs the invoices:write scope'),
 			action('pauseReminders', 'Pause Reminders', 'Pause payment reminders of an invoice', 'Needs the invoices:write scope', [
 				{ name: 'reason', kind: 'string', required: true },

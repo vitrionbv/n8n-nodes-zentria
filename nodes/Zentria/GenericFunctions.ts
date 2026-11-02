@@ -215,6 +215,7 @@ export const ZENTRIA_EVENTS = [
 	{ name: 'Invoice charged back', value: 'invoice.charged_back' },
 	{ name: 'Invoice overdue', value: 'invoice.overdue' },
 	{ name: 'Invoice cancelled', value: 'invoice.cancelled' },
+	{ name: 'Invoice adjusted', value: 'invoice.adjusted' },
 	{ name: 'Invoice reminder due', value: 'invoice.reminder.due' },
 	{ name: 'Invoice reminder sent', value: 'invoice.reminder.sent' },
 	{ name: 'Invoice reminder skipped', value: 'invoice.reminder.skipped' },

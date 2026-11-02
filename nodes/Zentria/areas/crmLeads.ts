@@ -302,7 +302,7 @@ export const crmLeadResources: ResourceSpec[] = [
 				value: 'rejectWithReason',
 				name: 'Reject With Reason',
 				action: 'Reject a CRM lead with a reason',
-				description: 'POST /crm/leads/{ID}/reject. A reason is required. Scope crm:write',
+				description: 'POST /crm/leads/{ID}/reject. A reason is required. On a lead of a sent invoice this credits it on the next invoice and needs the Manage invoices right. Scope crm:write',
 				method: 'POST',
 				path: '/api/public/crm/leads/{id}/reject',
 				params: [
@@ -337,7 +337,7 @@ export const crmLeadResources: ResourceSpec[] = [
 				value: 'setLeadValue',
 				name: 'Set Lead Value',
 				action: 'Set the lead value category of a CRM lead',
-				description: 'PUT /crm/leads/{ID}/lead-value. The amount follows from the category. Not possible for a lead on an invoice. Scope crm-values:write',
+				description: 'PUT /crm/leads/{ID}/lead-value. The amount follows from the category. On a lead of a sent invoice the difference waits for the next invoice and needs the Manage invoices right. Scope crm-values:write',
 				method: 'PUT',
 				path: '/api/public/crm/leads/{id}/lead-value',
 				params: [

@@ -75,6 +75,7 @@ const customerOperations: OperationSpec[] = [
 		value: 'pauseReminders',
 		name: 'Pause Reminders',
 		action: 'Pause payment reminders of a customer',
+		description: 'Sets remindersPauseSource to manual. Automatic pauses sit on the invoice, not on the customer.',
 		method: 'PATCH',
 		path: '/api/public/customers/{id}/pause-reminders',
 		params: [customerLocator, { name: 'reason', kind: 'string', required: true }],

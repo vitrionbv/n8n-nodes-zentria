@@ -33,6 +33,34 @@ const mailboxSettings: ParamSpec[] = [
 	{ name: 'lookbackDays', displayName: 'Lookback Days', kind: 'number', default: 1, description: 'How many days back new mail is looked at, 1 to 365' },
 ];
 
+/** The lead check and spam filter switches of a mailbox, for create and update. */
+const mailboxFilterSettings: ParamSpec[] = [
+	{
+		name: 'everyMailIsLead',
+		displayName: 'Every Mail Is Lead',
+		kind: 'boolean',
+		description: 'Whether every mail counts as a real request without the AI check. Only for a mailbox that receives nothing else',
+	},
+	{
+		name: 'moveSpam',
+		displayName: 'Move Spam',
+		kind: 'boolean',
+		description: 'Whether obvious advertising and acquisition moves to the folder Zentria spam in the customer mailbox. The lead check runs either way',
+	},
+	{
+		name: 'movePlatformMail',
+		displayName: 'Move Platform Mail',
+		kind: 'boolean',
+		description: 'With Move Spam on, whether platform mail, autoreplies and notifications move to Zentria platforms en automatisch',
+	},
+	{
+		name: 'spamFilterContext',
+		displayName: 'Spam Filter Context',
+		kind: 'string',
+		description: 'What this customer does and which mail is not spam for them, up to 1000 characters. Empty means the spam filter assumes a small trade business',
+	},
+];
+
 const elementorId: ParamSpec = { name: 'id', displayName: 'Connection ID', kind: 'number', required: true };
 const mailboxId: ParamSpec = { name: 'id', displayName: 'Mailbox ID', kind: 'number', required: true };
 const integrationId: ParamSpec = { name: 'id', displayName: 'Integration ID', kind: 'number', required: true };
@@ -150,6 +178,7 @@ export const connectionResources: ResourceSpec[] = [
 					{ name: 'folder', kind: 'string', required: true, default: 'INBOX', description: 'IMAP folder to poll' },
 					{ name: 'lookbackDays', displayName: 'Lookback Days', kind: 'number', required: true, default: 1 },
 					{ name: 'markAsRead', displayName: 'Mark As Read', kind: 'boolean' },
+					...mailboxFilterSettings,
 					{ name: 'isLive', displayName: 'Is Live', kind: 'boolean', default: true, description: 'Whether the mailbox is polled' },
 				],
 			},
@@ -163,6 +192,15 @@ export const connectionResources: ResourceSpec[] = [
 				params: [mailboxId],
 			},
 			{
+				value: 'forgetNotSpamExample',
+				name: 'Forget Learned Mail',
+				action: 'Forget a mail the spam filter learned from',
+				description: 'The spam filter judges mail from that sender itself again. Scope connections:write.',
+				method: 'DELETE',
+				path: '/api/public/mailbox-not-spam-examples/{id}',
+				params: [{ name: 'id', displayName: 'Learned Mail ID', kind: 'number', required: true }],
+			},
+			{
 				value: 'get',
 				name: 'Get',
 				action: 'Get a mailbox connection',
@@ -170,6 +208,17 @@ export const connectionResources: ResourceSpec[] = [
 				method: 'GET',
 				path: '/api/public/mailbox-connections/{id}',
 				params: [mailboxId],
+			},
+			{
+				value: 'getNotSpamExamples',
+				name: 'Get Learned Mails',
+				action: 'List what the spam filter learned from a mailbox',
+				description:
+					'Mail the customer dragged into the folder Foutief gemarkeerd als spam. Zentria put it back in the inbox and leaves mail from the same sender or business domain in the inbox from then on. Scope connections:read.',
+				method: 'GET',
+				path: '/api/public/mailbox-connections/{mailboxConnectionId}/not-spam-examples',
+				list: true,
+				params: [{ name: 'mailboxConnectionId', displayName: 'Mailbox ID', kind: 'number', required: true }],
 			},
 			{
 				value: 'getAll',
@@ -229,6 +278,7 @@ export const connectionResources: ResourceSpec[] = [
 					...mailboxSettings,
 					{ name: 'password', kind: 'string', secret: true },
 					{ name: 'markAsRead', displayName: 'Mark As Read', kind: 'boolean' },
+					...mailboxFilterSettings,
 					{ name: 'isLive', displayName: 'Is Live', kind: 'boolean', description: 'Whether the mailbox is polled' },
 				],
 			},

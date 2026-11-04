@@ -1,4 +1,3 @@
-import type { ResourceSpec } from './engine';
 import { businessProfileAdminResources } from './businessProfileAdmin';
 import { campaignResources } from './campaigns';
 import { communiqateResources } from './communiqate';
@@ -6,6 +5,7 @@ import { connectionResources } from './connections';
 import { crmLeadResources } from './crmLeads';
 import { crmSettingsResources } from './crmSettings';
 import { customerAdminResources } from './customerAdmin';
+import type { ResourceSpec } from './engine';
 import { invoiceResources } from './invoices';
 import { mailResources } from './mail';
 import { salesAdminResources } from './salesAdmin';

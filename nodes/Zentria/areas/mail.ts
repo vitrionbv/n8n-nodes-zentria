@@ -65,7 +65,7 @@ export const mailResources: ResourceSpec[] = [
 				value: 'getMessage',
 				name: 'Get Message',
 				action: 'Get a mail message',
-				description: 'One sent or queued mail with status and error. Bodies are only filled for mails sent through the API. Scope mail:read.',
+				description: 'One sent or queued mail with status and error. Bodies are filled for mails of the last 90 days, as sent (portal login tokens blanked out). Scope mail:read.',
 				method: 'GET',
 				path: `${base}/messages/{id}`,
 				params: [messageId],

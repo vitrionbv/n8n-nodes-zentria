@@ -1,6 +1,6 @@
 {
   "name": "@vitrion/n8n-nodes-zentria",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "description": "n8n community node for Zentria: signed webhooks plus the public team API.",
   "license": "MIT",
   "homepage": "https://github.com/vitrionbv/n8n-nodes-zentria",
@@ -22,7 +22,8 @@
     "lint": "n8n-node lint",
     "lint:fix": "n8n-node lint --fix",
     "release": "n8n-node release",
-    "prepublishOnly": "n8n-node prerelease"
+    "prepublishOnly": "n8n-node prerelease",
+    "test": "vitest run"
   },
   "files": [
     "dist"
@@ -44,7 +45,8 @@
     "eslint": "9.39.4",
     "prettier": "3.8.3",
     "release-it": "20.2.0",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "^3.2.7"
   },
   "peerDependencies": {
     "n8n-workflow": "*"

@@ -7,6 +7,7 @@ import type {
 	IHttpRequestOptions,
 	ILoadOptionsFunctions,
 } from 'n8n-workflow';
+import { NodeOperationError } from 'n8n-workflow';
 
 export type ZentriaModules = {
 	sales_cms?: boolean;
@@ -248,3 +249,120 @@ export const ZENTRIA_EVENTS = [
 	{ name: 'Mail sent', value: 'mail.sent' },
 	{ name: 'Mail failed', value: 'mail.failed' },
 ];
+
+/** Items per request when paging through a list. The public API allows at most 100. */
+export const LIST_PAGE_SIZE = 100;
+
+/** Pages fetched at most for "Return All", so a runaway list stops with an error instead of running forever. */
+export const LIST_MAX_PAGES = 100;
+
+export type ListOptions = {
+	/** Fetch every page. */
+	returnAll: boolean;
+	/** Items to return when returnAll is false. */
+	limit: number;
+};
+
+/**
+ * Fetch a paginated public API list. With returnAll it pages until a short page and throws when
+ * the list is longer than LIST_MAX_PAGES pages, so a workflow never silently misses items.
+ * Otherwise it returns at most `limit` items.
+ */
+export async function listItems(
+	this: IExecuteFunctions,
+	path: string,
+	qs: IDataObject,
+	options: ListOptions,
+): Promise<IDataObject[]> {
+	const wanted = options.returnAll ? Number.POSITIVE_INFINITY : Math.max(1, Math.floor(options.limit));
+	const perPage = options.returnAll ? LIST_PAGE_SIZE : Math.min(LIST_PAGE_SIZE, wanted);
+	const all: IDataObject[] = [];
+
+	for (let page = 1; page <= LIST_MAX_PAGES; page++) {
+		const items = collectionItems(
+			await zentriaApiRequest.call(this, 'GET', path, {}, { ...qs, itemsPerPage: perPage, page }),
+		);
+		all.push(...items);
+
+		if (all.length >= wanted) {
+			return all.slice(0, wanted);
+		}
+
+		if (items.length < perPage) {
+			return all;
+		}
+	}
+
+	// Exactly LIST_MAX_PAGES full pages: look one item further before calling the list too long.
+	const next = collectionItems(
+		await zentriaApiRequest.call(this, 'GET', path, {}, { ...qs, itemsPerPage: 1, page: all.length + 1 }),
+	);
+
+	if (next.length === 0) {
+		return all;
+	}
+
+	throw new NodeOperationError(
+		this.getNode(),
+		`The list ${path} has more than ${LIST_MAX_PAGES * LIST_PAGE_SIZE} items. Narrow it down with a filter or search.`,
+	);
+}
+
+export type ZentriaBinaryResponse = {
+	body: Buffer;
+	/** File name from the Content-Disposition header, when the API sends one. */
+	fileName: string | undefined;
+	mimeType: string | undefined;
+};
+
+/** GET a file (for example an invoice PDF) from the public API as raw bytes. */
+export async function zentriaBinaryRequest(
+	this: IExecuteFunctions,
+	path: string,
+	accept: string,
+): Promise<ZentriaBinaryResponse> {
+	const credentials = await this.getCredentials('zentriaApi');
+	const base = normalizeBaseUrl(String(credentials.baseUrl ?? ''));
+
+	const options: IHttpRequestOptions = {
+		method: 'GET',
+		url: `${base}${path.startsWith('/') ? path : `/${path}`}`,
+		encoding: 'arraybuffer',
+		json: false,
+		returnFullResponse: true,
+		headers: { Accept: accept },
+	};
+
+	const response = (await this.helpers.httpRequestWithAuthentication.call(this, 'zentriaApi', options)) as {
+		body: ArrayBuffer | Buffer;
+		headers?: Record<string, string | string[] | undefined>;
+	};
+	const header = (name: string): string | undefined => {
+		const value = response.headers?.[name] ?? response.headers?.[name.toLowerCase()];
+
+		return Array.isArray(value) ? value[0] : value;
+	};
+
+	return {
+		body: Buffer.isBuffer(response.body) ? response.body : Buffer.from(response.body),
+		fileName: fileNameFromDisposition(header('content-disposition')),
+		mimeType: header('content-type')?.split(';')[0].trim() || undefined,
+	};
+}
+
+/** The file name in a Content-Disposition header, for example `attachment; filename="I-2026-00042.pdf"`. */
+export function fileNameFromDisposition(disposition: string | undefined): string | undefined {
+	if (!disposition) {
+		return undefined;
+	}
+
+	const encoded = /filename\*=(?:UTF-8'')?([^;]+)/i.exec(disposition);
+
+	if (encoded) {
+		return decodeURIComponent(encoded[1].trim().replace(/^"|"$/g, ''));
+	}
+
+	const plain = /filename=("?)([^";]+)\1/i.exec(disposition);
+
+	return plain ? plain[2].trim() : undefined;
+}

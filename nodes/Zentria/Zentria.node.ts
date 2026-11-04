@@ -12,17 +12,66 @@ import type {
 import { NodeOperationError } from 'n8n-workflow';
 
 import { AREA_RESOURCES } from './areas';
-import { executeArea, findResource, moduleMessage, withAreas } from './areas/engine';
+import { BinaryOutput, executeArea, findResource, moduleMessage, withAreas } from './areas/engine';
 import {
 	SALES_ACTIVITY_TYPES,
 	collectionItems,
 	getMe,
+	listItems,
 	locatorId,
 	locatorNumericId,
 	zentriaApiRequest,
 } from './GenericFunctions';
 
 const salesResources = ['deal', 'person', 'organization', 'form', 'submission', 'pipeline', 'activity'];
+
+/**
+ * Hand-coded Get Many operations: parameter prefix, resource and whether Return All is on by default.
+ * Customer returns everything by default, because flows use it as a lookup table.
+ */
+const LIST_OPERATIONS: Array<{ prefix: string; resource: string; returnAll: boolean }> = [
+	{ prefix: 'customer', resource: 'customer', returnAll: true },
+	{ prefix: 'deal', resource: 'deal', returnAll: false },
+	{ prefix: 'person', resource: 'person', returnAll: false },
+	{ prefix: 'organization', resource: 'organization', returnAll: false },
+	{ prefix: 'form', resource: 'form', returnAll: false },
+	{ prefix: 'submission', resource: 'submission', returnAll: false },
+	{ prefix: 'pipeline', resource: 'pipeline', returnAll: false },
+	{ prefix: 'activity', resource: 'activity', returnAll: false },
+	{ prefix: 'member', resource: 'member', returnAll: false },
+	{ prefix: 'todo', resource: 'todo', returnAll: false },
+	{ prefix: 'stlFlow', resource: 'stlFlow', returnAll: false },
+	{ prefix: 'webhook', resource: 'webhook', returnAll: false },
+];
+
+/** Return All plus a Limit that shows when Return All is off. */
+function listParameters(prefix: string, show: { resource: string[]; operation: string[] }, returnAll = false): INodeProperties[] {
+	const toggle: INodeProperties = {
+		displayName: 'Return All',
+		name: `${prefix}ReturnAll`,
+		type: 'boolean',
+		default: false,
+		description: 'Whether to return all results or only up to a given limit',
+		displayOptions: { show },
+	};
+
+	if (returnAll) {
+		toggle.default = true;
+	}
+
+	return [
+		toggle,
+		{
+			displayName: 'Limit',
+			name: `${prefix}Limit`,
+			type: 'number',
+			typeOptions: { minValue: 1 },
+			default: 50,
+			description: 'Max number of results to return',
+			displayOptions: { show: { ...show, [`${prefix}ReturnAll`]: [false] } },
+		},
+	];
+}
 
 function locator(
 	displayName: string,
@@ -382,6 +431,9 @@ export class Zentria implements INodeType {
 				default: '',
 				displayOptions: { show: { operation: ['getAll', 'getLocations', 'getSearchKeywords'] } },
 			},
+			...LIST_OPERATIONS.flatMap(({ prefix, resource, returnAll }) =>
+				listParameters(prefix, { resource: [resource], operation: ['getAll'] }, returnAll),
+			),
 			{
 				displayName: 'Filters',
 				name: 'dealFilters',
@@ -528,14 +580,7 @@ export class Zentria implements INodeType {
 					},
 				],
 			},
-			{
-				displayName: 'Return All',
-				name: 'crmCallReturnAll',
-				type: 'boolean',
-				default: false,
-				description: 'Whether to return all results (paged 100 at a time) or only the first 50',
-				displayOptions: { show: { resource: ['crmCall'], operation: ['getAll'] } },
-			},
+			...listParameters('crmCall', { resource: ['crmCall'], operation: ['getAll'] }),
 			locator('CRM Lead', 'crmLeadId', 'searchCrmLeads', {
 				resource: ['crmLead'],
 				operation: ['get', 'approve', 'reject'],
@@ -612,14 +657,7 @@ export class Zentria implements INodeType {
 					},
 				],
 			},
-			{
-				displayName: 'Return All',
-				name: 'crmLeadReturnAll',
-				type: 'boolean',
-				default: false,
-				description: 'Whether to return all results (paged 100 at a time) or only the first 50',
-				displayOptions: { show: { resource: ['crmLead'], operation: ['getAll'] } },
-			},
+			...listParameters('crmLead', { resource: ['crmLead'], operation: ['getAll'] }),
 			locator('Member', 'memberId', 'searchMembers', {
 				resource: ['member'],
 				operation: ['changeRole'],
@@ -914,16 +952,10 @@ export class Zentria implements INodeType {
 					},
 				],
 			},
-			{
-				displayName: 'Return All',
-				name: 'bpReturnAll',
-				type: 'boolean',
-				default: false,
-				description: 'Whether to return all results (paged 100 at a time) or only the first 50',
-				displayOptions: {
-					show: { resource: ['businessProfile'], operation: ['getReplies', 'getChanges', 'getPosts'] },
-				},
-			},
+			...listParameters('bp', {
+				resource: ['businessProfile'],
+				operation: ['getLocations', 'getReviews', 'getReplies', 'getChanges', 'getPosts'],
+			}),
 			{
 				displayName: 'Location IDs',
 				name: 'bpPostLocationIds',
@@ -1191,6 +1223,12 @@ export class Zentria implements INodeType {
 			}
 
 			const response = await runOperation.call(this, resource, operation, i);
+
+			if (response instanceof BinaryOutput) {
+				returnData.push({ json: response.json, binary: response.binary });
+				continue;
+			}
+
 			const json = Array.isArray(response) ? { items: response } : response;
 			returnData.push({ json });
 		}
@@ -1204,9 +1242,14 @@ async function runOperation(
 	resource: string,
 	operation: string,
 	index: number,
-): Promise<IDataObject | IDataObject[]> {
+): Promise<IDataObject | IDataObject[] | BinaryOutput> {
 	const q = (this.getNodeParameter('q', index, '') as string) || undefined;
 	const listQs: IDataObject = { itemsPerPage: 50, ...(q ? { q } : {}) };
+	const list = (prefix: string, path: string, qs: IDataObject, returnAll = false): Promise<IDataObject[]> =>
+		listItems.call(this, path, qs, {
+			returnAll: this.getNodeParameter(`${prefix}ReturnAll`, index, returnAll) as boolean,
+			limit: this.getNodeParameter(`${prefix}Limit`, index, 50) as number,
+		});
 
 	if (resource === 'me' && operation === 'get') {
 		return zentriaApiRequest.call(this, 'GET', '/api/public/me');
@@ -1229,7 +1272,7 @@ async function runOperation(
 				}
 			}
 
-			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/sales/deals', {}, qs));
+			return list('deal', '/api/public/sales/deals', qs);
 		}
 
 		if (operation === 'get') {
@@ -1281,7 +1324,7 @@ async function runOperation(
 
 	if (resource === 'person') {
 		if (operation === 'getAll') {
-			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/sales/people', {}, listQs));
+			return list('person', '/api/public/sales/people', listQs);
 		}
 
 		if (operation === 'get') {
@@ -1304,7 +1347,7 @@ async function runOperation(
 
 	if (resource === 'organization') {
 		if (operation === 'getAll') {
-			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/sales/organizations', {}, listQs));
+			return list('organization', '/api/public/sales/organizations', listQs);
 		}
 
 		if (operation === 'get') {
@@ -1329,19 +1372,19 @@ async function runOperation(
 
 	if (resource === 'form') {
 		if (operation === 'getAll') {
-			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/sales/forms', {}, listQs));
+			return list('form', '/api/public/sales/forms', listQs);
 		}
 
 		return zentriaApiRequest.call(this, 'GET', `/api/public/sales/forms/${locatorId(this.getNodeParameter('formId', index))}`);
 	}
 
 	if (resource === 'submission') {
-		return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/sales/submissions', {}, listQs));
+		return list('submission', '/api/public/sales/submissions', listQs);
 	}
 
 	if (resource === 'pipeline') {
 		if (operation === 'getAll') {
-			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/sales/pipelines', {}, listQs));
+			return list('pipeline', '/api/public/sales/pipelines', listQs);
 		}
 
 		const pipelineId = locatorNumericId(this.getNodeParameter('pipelineId', index, ''));
@@ -1355,7 +1398,7 @@ async function runOperation(
 
 	if (resource === 'activity') {
 		if (operation === 'getAll') {
-			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/sales/activities', {}, listQs));
+			return list('activity', '/api/public/sales/activities', listQs);
 		}
 
 		if (operation === 'create') {
@@ -1401,25 +1444,7 @@ async function runOperation(
 				...(listQs.q ? { q: listQs.q } : {}),
 			};
 
-			if (!this.getNodeParameter('crmCallReturnAll', index, false)) {
-				return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/crm/calls', {}, qs));
-			}
-
-			const perPage = 100;
-			const all: IDataObject[] = [];
-
-			for (let page = 1; page <= 100; page++) {
-				const items = collectionItems(
-					await zentriaApiRequest.call(this, 'GET', '/api/public/crm/calls', {}, { ...qs, itemsPerPage: perPage, page }),
-				);
-				all.push(...items);
-
-				if (items.length < perPage) {
-					break;
-				}
-			}
-
-			return all;
+			return list('crmCall', '/api/public/crm/calls', qs);
 		}
 	}
 
@@ -1444,25 +1469,7 @@ async function runOperation(
 				...(listQs.q ? { q: listQs.q } : {}),
 			};
 
-			if (!this.getNodeParameter('crmLeadReturnAll', index, false)) {
-				return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/crm/leads', {}, qs));
-			}
-
-			const perPage = 100;
-			const all: IDataObject[] = [];
-
-			for (let page = 1; page <= 100; page++) {
-				const items = collectionItems(
-					await zentriaApiRequest.call(this, 'GET', '/api/public/crm/leads', {}, { ...qs, itemsPerPage: perPage, page }),
-				);
-				all.push(...items);
-
-				if (items.length < perPage) {
-					break;
-				}
-			}
-
-			return all;
+			return list('crmLead', '/api/public/crm/leads', qs);
 		}
 
 		if (operation === 'get') {
@@ -1486,9 +1493,7 @@ async function runOperation(
 		if (operation === 'getAll') {
 			const status = this.getNodeParameter('customerStatus', index, 'active') as string;
 
-			return collectionItems(
-				await zentriaApiRequest.call(this, 'GET', '/api/public/customers', {}, { ...listQs, status }),
-			);
+			return list('customer', '/api/public/customers', { ...listQs, status }, true);
 		}
 
 		if (operation === 'archive' || operation === 'restore') {
@@ -1520,7 +1525,7 @@ async function runOperation(
 
 	if (resource === 'member') {
 		if (operation === 'getAll') {
-			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/members', {}, listQs));
+			return list('member', '/api/public/members', listQs);
 		}
 
 		if (operation === 'invite') {
@@ -1542,7 +1547,7 @@ async function runOperation(
 
 	if (resource === 'todo') {
 		if (operation === 'getAll') {
-			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/todos', {}, listQs));
+			return list('todo', '/api/public/todos', listQs);
 		}
 
 		if (operation === 'get') {
@@ -1565,7 +1570,7 @@ async function runOperation(
 
 	if (resource === 'stlFlow') {
 		if (operation === 'getAll') {
-			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/stl/flows', {}, listQs));
+			return list('stlFlow', '/api/public/stl/flows', listQs);
 		}
 
 		if (operation === 'get') {
@@ -1613,7 +1618,7 @@ async function runOperation(
 
 	if (resource === 'webhook') {
 		if (operation === 'getAll') {
-			return collectionItems(await zentriaApiRequest.call(this, 'GET', '/api/public/webhooks', {}, listQs));
+			return list('webhook', '/api/public/webhooks', listQs);
 		}
 
 		if (operation === 'create') {
@@ -1663,6 +1668,11 @@ async function runBusinessProfileOperation(
 ): Promise<IDataObject | IDataObject[]> {
 	const base = '/api/public/business-profiles';
 	const numeric = (name: string): number => Number(this.getNodeParameter(name, index));
+	const list = (path: string, qs: IDataObject): Promise<IDataObject[]> =>
+		listItems.call(this, path, qs, {
+			returnAll: this.getNodeParameter('bpReturnAll', index, false) as boolean,
+			limit: this.getNodeParameter('bpLimit', index, 50) as number,
+		});
 
 	if (operation === 'getLocations') {
 		const filters = this.getNodeParameter('bpLocationFilters', index, {}) as IDataObject;
@@ -1677,7 +1687,7 @@ async function runBusinessProfileOperation(
 			...(listQs.q ? { q: listQs.q } : {}),
 		};
 
-		return collectionItems(await zentriaApiRequest.call(this, 'GET', `${base}/locations`, {}, qs));
+		return list(`${base}/locations`, qs);
 	}
 
 	if (operation === 'getLocation') {
@@ -1734,7 +1744,7 @@ async function runBusinessProfileOperation(
 			since: 'since',
 		});
 
-		return collectionItems(await zentriaApiRequest.call(this, 'GET', `${base}/reviews`, {}, qs));
+		return list(`${base}/reviews`, qs);
 	}
 
 	if (operation === 'getReplies' || operation === 'getChanges' || operation === 'getPosts') {
@@ -1742,25 +1752,7 @@ async function runBusinessProfileOperation(
 		const qs = businessProfileQuery(filters, { locationId: 'location_id', status: 'status' });
 		const path = { getReplies: 'review-replies', getChanges: 'changes', getPosts: 'posts' }[operation];
 
-		if (!this.getNodeParameter('bpReturnAll', index, false)) {
-			return collectionItems(await zentriaApiRequest.call(this, 'GET', `${base}/${path}`, {}, qs));
-		}
-
-		const perPage = 100;
-		const all: IDataObject[] = [];
-
-		for (let page = 1; page <= 100; page++) {
-			const items = collectionItems(
-				await zentriaApiRequest.call(this, 'GET', `${base}/${path}`, {}, { ...qs, itemsPerPage: perPage, page }),
-			);
-			all.push(...items);
-
-			if (items.length < perPage) {
-				break;
-			}
-		}
-
-		return all;
+		return list(`${base}/${path}`, qs);
 	}
 
 	if (operation === 'approveReply') {

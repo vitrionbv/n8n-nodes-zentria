@@ -1,7 +1,7 @@
-import type { IDataObject, IExecuteFunctions, INodeProperties, INodePropertyOptions } from 'n8n-workflow';
+import type { IBinaryKeyData, IDataObject, IExecuteFunctions, INodeProperties, INodePropertyOptions } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 
-import { collectionItems, locatorId, zentriaApiRequest } from '../GenericFunctions';
+import { listItems, locatorId, zentriaApiRequest, zentriaBinaryRequest } from '../GenericFunctions';
 
 /**
  * Declarative operations for the Zentria node.
@@ -63,6 +63,24 @@ export interface OperationSpec {
 	params?: ParamSpec[];
 	/** A paginated list: adds "Return All" and collects the items. */
 	list?: boolean;
+	/**
+	 * The operation downloads a file (GET only): the item gets the file as binary data in the field the user picks
+	 * (default `data`), so a next node, for example Pipedrive File > Upload, can use it.
+	 */
+	binary?: {
+		/** Accept header and fallback MIME type, for example `application/pdf`. */
+		mimeType: string;
+		/** File name when the API sends none. `{name}` placeholders take the path parameter values. */
+		fileName: string;
+	};
+}
+
+/** The result of a binary operation: JSON about the file plus the file itself. */
+export class BinaryOutput {
+	constructor(
+		public readonly json: IDataObject,
+		public readonly binary: IBinaryKeyData,
+	) {}
 }
 
 export interface ResourceSpec {
@@ -251,14 +269,35 @@ function operationProperties(resource: string, spec: OperationSpec): INodeProper
 		});
 	}
 
+	if (spec.binary) {
+		properties.push({
+			displayName: 'Put Output File in Field',
+			name: propertyName(resource, spec.value, 'binaryPropertyName'),
+			type: 'string',
+			default: 'data',
+			required: true,
+			hint: 'The name of the output binary field to put the file in',
+			displayOptions: { show },
+		});
+	}
+
 	if (spec.list) {
 		properties.push({
 			displayName: 'Return All',
 			name: propertyName(resource, spec.value, 'returnAll'),
 			type: 'boolean',
 			default: false,
-			description: 'Whether to return all results (paged 100 at a time) or only the first 50',
+			description: 'Whether to return all results or only up to a given limit',
 			displayOptions: { show },
+		});
+		properties.push({
+			displayName: 'Limit',
+			name: propertyName(resource, spec.value, 'limit'),
+			type: 'number',
+			typeOptions: { minValue: 1 },
+			default: 50,
+			description: 'Max number of results to return',
+			displayOptions: { show: { ...show, [propertyName(resource, spec.value, 'returnAll')]: [false] } },
 		});
 	}
 
@@ -298,6 +337,7 @@ export function withAreas(properties: INodeProperties[], resources: ResourceSpec
 					{ name: resource.name, value: resource.value },
 				]);
 			}
+
 			existingResources.add(resource.value);
 
 			const defaultOperation = String(
@@ -429,7 +469,7 @@ export async function executeArea(
 	resource: ResourceSpec,
 	operation: string,
 	index: number,
-): Promise<IDataObject | IDataObject[]> {
+): Promise<IDataObject | IDataObject[] | BinaryOutput> {
 	const spec = resource.operations.find((candidate) => candidate.value === operation);
 
 	if (!spec) {
@@ -443,6 +483,7 @@ export async function executeArea(
 	const query: IDataObject = {};
 	const body: IDataObject = {};
 	const headers: IDataObject = {};
+	const pathValues: IDataObject = {};
 
 	for (const param of spec.params ?? []) {
 		const value = readValue(this, resource.value, spec, param, index, options);
@@ -455,6 +496,7 @@ export async function executeArea(
 
 		if (target === 'path') {
 			path = path.replace(`{${param.name}}`, encodeURIComponent(String(value)));
+			pathValues[param.name] = value as never;
 		} else if (target === 'query') {
 			query[param.name] = value as never;
 		} else if (target === 'header') {
@@ -464,6 +506,10 @@ export async function executeArea(
 		}
 	}
 
+	if (spec.binary) {
+		return downloadFile(this, resource, spec, spec.binary, path, pathValues, index);
+	}
+
 	if (!spec.list) {
 		const response = await zentriaApiRequest.call(this, spec.method, path, body, query, headers);
 
@@ -471,25 +517,32 @@ export async function executeArea(
 		return response !== null && typeof response === 'object' ? response : { ok: true };
 	}
 
-	const returnAll = this.getNodeParameter(propertyName(resource.value, spec.value, 'returnAll'), index, false) as boolean;
+	return listItems.call(this, path, query, {
+		returnAll: this.getNodeParameter(propertyName(resource.value, spec.value, 'returnAll'), index, false) as boolean,
+		limit: this.getNodeParameter(propertyName(resource.value, spec.value, 'limit'), index, 50) as number,
+	});
+}
 
-	if (!returnAll) {
-		return collectionItems(await zentriaApiRequest.call(this, 'GET', path, {}, { itemsPerPage: 50, ...query }));
-	}
+async function downloadFile(
+	context: IExecuteFunctions,
+	resource: ResourceSpec,
+	spec: OperationSpec,
+	binary: NonNullable<OperationSpec['binary']>,
+	path: string,
+	pathValues: IDataObject,
+	index: number,
+): Promise<BinaryOutput> {
+	const field = String(
+		context.getNodeParameter(propertyName(resource.value, spec.value, 'binaryPropertyName'), index, 'data'),
+	).trim() || 'data';
+	const file = await zentriaBinaryRequest.call(context, path, binary.mimeType);
+	const fileName =
+		file.fileName ?? binary.fileName.replace(/\{(\w+)\}/g, (_match, name: string) => String(pathValues[name] ?? name));
+	const mimeType = file.mimeType ?? binary.mimeType;
+	const data = await context.helpers.prepareBinaryData(file.body, fileName, mimeType);
 
-	const perPage = 100;
-	const all: IDataObject[] = [];
-
-	for (let page = 1; page <= 100; page++) {
-		const items = collectionItems(
-			await zentriaApiRequest.call(this, 'GET', path, {}, { ...query, itemsPerPage: perPage, page }),
-		);
-		all.push(...items);
-
-		if (items.length < perPage) {
-			break;
-		}
-	}
-
-	return all;
+	return new BinaryOutput(
+		{ ...pathValues, fileName, mimeType, fileSize: file.body.length, binaryPropertyName: field },
+		{ [field]: data },
+	);
 }

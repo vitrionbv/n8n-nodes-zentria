@@ -275,6 +275,7 @@ const pipelineOperations: OperationSpec[] = [
 			{ name: 'name', kind: 'string' },
 			{ name: 'isDefault', displayName: 'Make Default', kind: 'boolean', description: 'Whether to make this the default pipeline' },
 			{ name: 'rotAfterDays', displayName: 'Rot After Days', kind: 'number', description: 'Days without activity before a deal shows as rotting' },
+			{ name: 'boardHideAfterDays', displayName: 'Board Hide After Days', kind: 'number', description: 'Days before lost deals and no-shows without an open task leave the board. Data stays.' },
 			{
 				name: 'visibility',
 				kind: 'options',

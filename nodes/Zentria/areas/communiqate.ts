@@ -38,9 +38,9 @@ const messageTypes = [
 ];
 
 const templateCategories = [
-	{ name: 'Authentication', value: 'AUTHENTICATION' },
-	{ name: 'Marketing', value: 'MARKETING' },
-	{ name: 'Utility', value: 'UTILITY' },
+	{ name: 'Authentication', value: 'authentication' },
+	{ name: 'Marketing', value: 'marketing' },
+	{ name: 'Utility', value: 'utility' },
 ];
 
 export const communiqateResources: ResourceSpec[] = [
@@ -99,8 +99,8 @@ export const communiqateResources: ResourceSpec[] = [
 					whatsappAccount,
 					{ name: 'name', kind: 'string', required: true, description: 'Lowercase letters, digits and underscores' },
 					{ name: 'language', kind: 'string', required: true, default: 'nl' },
-					{ name: 'category', kind: 'options', required: true, options: templateCategories, default: 'UTILITY' },
-					{ name: 'components', kind: 'json', required: true, default: '[]', description: 'Meta-style components: HEADER, BODY, FOOTER, BUTTONS' },
+					{ name: 'category', kind: 'options', required: true, options: templateCategories, default: 'utility' },
+					{ name: 'components', kind: 'json', required: true, default: '[]', description: 'CommuniQate components with lowercase types, each at most once: header (format text, text, header_example), body (text, body_examples), footer (text) and buttons (quick_reply, url, phone_number or copy_code)' },
 					{ name: 'submit_to_whatsapp', displayName: 'Submit to WhatsApp', kind: 'boolean', description: 'Whether to submit the template to Meta for review in the same call' },
 				],
 			},
@@ -392,7 +392,7 @@ export const communiqateResources: ResourceSpec[] = [
 				params: [
 					whatsappAccount,
 					messageTemplate,
-					{ name: 'category', kind: 'options', options: templateCategories, default: 'UTILITY' },
+					{ name: 'category', kind: 'options', options: templateCategories, default: 'utility' },
 					{ name: 'components', kind: 'json', default: '[]' },
 				],
 			},

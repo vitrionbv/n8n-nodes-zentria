@@ -101,6 +101,7 @@ const leadFilters: ParamSpec[] = [
 		options: [
 			{ name: 'Form (Elementor)', value: 'elementor' },
 			{ name: 'Mail', value: 'mail' },
+			{ name: 'Phone (10telecom)', value: 'tentelecom' },
 			{ name: 'Phone (Voys)', value: 'voys' },
 		],
 	},
@@ -145,6 +146,7 @@ const submissionFilters: ParamSpec[] = [
 		options: [
 			{ name: 'Form (Elementor)', value: 'elementor' },
 			{ name: 'Mail', value: 'mail' },
+			{ name: 'Phone (10telecom)', value: 'tentelecom' },
 			{ name: 'Phone (Voys)', value: 'voys' },
 		],
 	},

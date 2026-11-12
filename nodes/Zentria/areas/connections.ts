@@ -65,6 +65,7 @@ const elementorId: ParamSpec = { name: 'id', displayName: 'Connection ID', kind:
 const mailboxId: ParamSpec = { name: 'id', displayName: 'Mailbox ID', kind: 'number', required: true };
 const integrationId: ParamSpec = { name: 'id', displayName: 'Integration ID', kind: 'number', required: true };
 const voysAccountId: ParamSpec = { name: 'id', displayName: 'Voys Account ID', kind: 'number', required: true };
+const tentelecomConnectionId: ParamSpec = { name: 'id', displayName: '10telecom Connection ID', kind: 'number', required: true };
 
 const genericProvider: ParamSpec = {
 	name: 'provider',
@@ -78,7 +79,7 @@ const genericProvider: ParamSpec = {
 	default: 'wordpress',
 };
 
-/** Resources and operations for Elementor, mailbox and Voys connections of a campaign. */
+/** Resources and operations for Elementor, mailbox, Voys and 10telecom connections of a campaign. */
 export const connectionResources: ResourceSpec[] = [
 	{
 		value: 'elementorConnection',
@@ -285,6 +286,40 @@ export const connectionResources: ResourceSpec[] = [
 		],
 	},
 	{
+		value: 'campaignPhoneLines',
+		name: 'Campaign Phone Number',
+		operations: [
+			{
+				value: 'get',
+				name: 'Get',
+				action: 'Get the phone numbers of a campaign',
+				description: 'Every number with its provider: voys or tentelecom (10telecom). Scope connections:read.',
+				method: 'GET',
+				path: '/api/public/campaigns/{campaignId}/phone-lines',
+				params: [campaignId],
+			},
+			{
+				value: 'set',
+				name: 'Set',
+				action: 'Set all phone numbers of a campaign',
+				description: 'Replaces every number. Move a number from Voys to 10telecom by sending the full list with the new provider. An empty list removes all numbers. Scope connections:write.',
+				method: 'PUT',
+				path: '/api/public/campaigns/{campaignId}/phone-lines',
+				params: [
+					campaignId,
+					{
+						name: 'lines',
+						displayName: 'Lines',
+						kind: 'json',
+						required: true,
+						default: '[{"number": "+31851093749", "provider": "tentelecom"}]',
+						description: 'A list of {number, provider}; number in international format, provider voys or tentelecom',
+					},
+				],
+			},
+		],
+	},
+	{
 		value: 'campaignVoys',
 		name: 'Campaign Voys Numbers',
 		operations: [
@@ -436,6 +471,70 @@ export const connectionResources: ResourceSpec[] = [
 					{ name: 'name', kind: 'string' },
 					{ name: 'apiKey', displayName: 'API Key', kind: 'string', secret: true },
 					{ name: 'clientUuid', displayName: 'Client UUID', kind: 'string' },
+					{ name: 'isActive', displayName: 'Is Active', kind: 'boolean', default: true },
+				],
+			},
+		],
+	},
+	{
+		value: 'tentelecomConnection',
+		name: '10telecom Connection',
+		operations: [
+			{
+				value: 'create',
+				name: 'Create',
+				action: 'Add a 10telecom connection to the team',
+				description: 'The API key is write-only; the webhook secret is shown in the app only. Needs the CRM leads module. Scope connections:write.',
+				method: 'POST',
+				path: '/api/public/crm/tentelecom-connections',
+				params: [
+					{ name: 'name', kind: 'string', required: true },
+					{ name: 'tenantCode', displayName: 'Tenant Code', kind: 'string', required: true, description: 'For example T1234567890' },
+					{ name: 'apiKey', displayName: 'API Key', kind: 'string', required: true, secret: true },
+					{ name: 'baseUrl', displayName: 'Base URL', kind: 'string', description: 'https address on tring.nu, default https://web2.tring.nu' },
+					{ name: 'isActive', displayName: 'Is Active', kind: 'boolean', default: true },
+				],
+			},
+			{
+				value: 'delete',
+				name: 'Delete',
+				action: 'Delete a 10telecom connection',
+				description: 'Scope connections:write',
+				method: 'DELETE',
+				path: '/api/public/crm/tentelecom-connections/{id}',
+				params: [tentelecomConnectionId],
+			},
+			{
+				value: 'get',
+				name: 'Get',
+				action: 'Get a 10telecom connection',
+				description: 'Without the API key; hasApiKey says whether one is stored. Scope connections:read.',
+				method: 'GET',
+				path: '/api/public/crm/tentelecom-connections/{id}',
+				params: [tentelecomConnectionId],
+			},
+			{
+				value: 'getAll',
+				name: 'Get Many',
+				action: 'List the 10telecom connections of the team',
+				description: 'Needs the CRM leads module and the permission to manage telephony. Scope connections:read.',
+				method: 'GET',
+				path: '/api/public/crm/tentelecom-connections',
+				list: true,
+			},
+			{
+				value: 'update',
+				name: 'Update',
+				action: 'Update a 10telecom connection',
+				description: 'Fields you leave empty stay as they are; an empty API key keeps the stored one. Scope connections:write.',
+				method: 'PUT',
+				path: '/api/public/crm/tentelecom-connections/{id}',
+				params: [
+					tentelecomConnectionId,
+					{ name: 'name', kind: 'string' },
+					{ name: 'tenantCode', displayName: 'Tenant Code', kind: 'string' },
+					{ name: 'apiKey', displayName: 'API Key', kind: 'string', secret: true },
+					{ name: 'baseUrl', displayName: 'Base URL', kind: 'string' },
 					{ name: 'isActive', displayName: 'Is Active', kind: 'boolean', default: true },
 				],
 			},

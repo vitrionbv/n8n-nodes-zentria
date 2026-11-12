@@ -297,7 +297,7 @@ export class Zentria implements INodeType {
 						name: 'Get',
 						value: 'get',
 						action: 'Get a call',
-						description: 'Get one Voys call with transcript, summary and linked lead',
+						description: 'Get one phone call (Voys or 10telecom) with transcript, summary and linked lead',
 					},
 					{ name: 'Get Many', value: 'getAll', action: 'List calls' },
 				],
@@ -565,6 +565,16 @@ export class Zentria implements INodeType {
 						description: 'Partial phone number of the caller or the number called',
 					},
 					{
+						displayName: 'Provider',
+						name: 'provider',
+						type: 'options',
+						options: [
+							{ name: '10telecom', value: 'tentelecom' },
+							{ name: 'Voys', value: 'voys' },
+						],
+						default: 'voys',
+					},
+					{
 						displayName: 'Received After',
 						name: 'receivedAfter',
 						type: 'dateTime',
@@ -651,6 +661,7 @@ export class Zentria implements INodeType {
 						options: [
 							{ name: 'Form (Elementor)', value: 'elementor' },
 							{ name: 'Mail', value: 'mail' },
+							{ name: 'Phone (10telecom)', value: 'tentelecom' },
 							{ name: 'Phone (Voys)', value: 'voys' },
 						],
 						default: 'elementor',
@@ -1435,6 +1446,7 @@ async function runOperation(
 					campaignId: 'campaignId',
 					leadId: 'leadId',
 					outcome: 'outcome',
+					provider: 'provider',
 					direction: 'direction',
 					phone: 'phone',
 					receivedAfter: 'receivedAt[after]',

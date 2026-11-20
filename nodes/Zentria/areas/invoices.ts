@@ -64,7 +64,7 @@ export const invoiceResources: ResourceSpec[] = [
 						default: 'draft',
 					},
 					{ name: 'period', kind: 'string', description: 'ISO week of the invoice, for example 2026-W07' },
-					{ name: 'outstanding', kind: 'boolean', description: 'Whether to return only invoices that still have to be paid: ready, sent, failed or overdue (no drafts, no charged back)' },
+					{ name: 'outstanding', kind: 'boolean', description: 'Whether to return only invoices that still have to be paid: ready, sent, failed, overdue or charged back (no drafts)' },
 					{ name: 'withLines', displayName: 'Include Lines', kind: 'boolean', description: 'Whether to include the invoice lines' },
 				],
 			},

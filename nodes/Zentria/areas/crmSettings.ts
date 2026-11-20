@@ -11,6 +11,7 @@ const categoryKey: ParamSpec = {
 
 const dashboardRanges = [
 	{ name: 'Today', value: 'today' },
+	{ name: 'Yesterday', value: 'yesterday' },
 	{ name: 'This Month (Default)', value: 'month' },
 	{ name: 'Previous Month', value: 'previous_month' },
 	{ name: 'Last 7 Days', value: '7' },

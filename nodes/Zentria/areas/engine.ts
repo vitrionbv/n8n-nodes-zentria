@@ -26,8 +26,19 @@ export interface ParamSpec {
 	/**
 	 * `emailList`: a comma separated text field, sent as an array of trimmed addresses.
 	 * `keyValue`: key/value pairs in the UI, sent as one object.
+	 * `binaryAttachments`: comma separated binary field names of the input item, sent as a list of
+	 * `{filename, contentBase64, contentType}` (file name and type from the binary data).
 	 */
-	kind: 'string' | 'number' | 'boolean' | 'options' | 'dateTime' | 'json' | 'emailList' | 'keyValue';
+	kind:
+		| 'string'
+		| 'number'
+		| 'boolean'
+		| 'options'
+		| 'dateTime'
+		| 'json'
+		| 'emailList'
+		| 'keyValue'
+		| 'binaryAttachments';
 	/** Required params are always shown. Optional params sit under "Options" and are only sent when filled. */
 	required?: boolean;
 	/** Show an optional param at the top instead of under "Options". It is still only sent when filled. */
@@ -417,6 +428,15 @@ function readValue(
 		return list.length > 0 || isRequired(spec, param) ? list : undefined;
 	}
 
+	if (param.kind === 'binaryAttachments') {
+		const names = String(raw)
+			.split(',')
+			.map((item) => item.trim())
+			.filter((item) => item !== '');
+
+		return names.length > 0 ? names : undefined;
+	}
+
 	if (param.kind === 'keyValue') {
 		const pairs = ((raw as IDataObject).values ?? []) as Array<{ key?: string; value?: unknown }>;
 		const object: IDataObject = {};
@@ -486,7 +506,11 @@ export async function executeArea(
 	const pathValues: IDataObject = {};
 
 	for (const param of spec.params ?? []) {
-		const value = readValue(this, resource.value, spec, param, index, options);
+		let value = readValue(this, resource.value, spec, param, index, options);
+
+		if (param.kind === 'binaryAttachments' && value !== undefined) {
+			value = await binaryAttachments(this, value as string[], index);
+		}
 
 		if (value === undefined) {
 			continue;
@@ -521,6 +545,25 @@ export async function executeArea(
 		returnAll: this.getNodeParameter(propertyName(resource.value, spec.value, 'returnAll'), index, false) as boolean,
 		limit: this.getNodeParameter(propertyName(resource.value, spec.value, 'limit'), index, 50) as number,
 	});
+}
+
+/** Read binary fields of the input item as attachments: file name, base64 content and MIME type. */
+async function binaryAttachments(context: IExecuteFunctions, names: string[], index: number): Promise<IDataObject[]> {
+	const attachments: IDataObject[] = [];
+
+	for (const name of names) {
+		const binary = context.helpers.assertBinaryData(index, name);
+		const buffer = await context.helpers.getBinaryDataBuffer(index, name);
+		const extension = binary.fileExtension ? `.${binary.fileExtension}` : '';
+
+		attachments.push({
+			filename: binary.fileName ?? `${name}${extension}`,
+			contentBase64: buffer.toString('base64'),
+			...(binary.mimeType ? { contentType: binary.mimeType } : {}),
+		});
+	}
+
+	return attachments;
 }
 
 async function downloadFile(

@@ -132,6 +132,12 @@ export const mailResources: ResourceSpec[] = [
 						description: 'Overrides only the display name, the address stays the account address',
 					},
 					{
+						name: 'attachments',
+						kind: 'binaryAttachments',
+						description:
+							'Binary fields of the input item to attach, comma separated (for example data or data,invoicePdf). At most 10 files and 10 MB together; programs and scripts are refused.',
+					},
+					{
 						name: 'metadata',
 						kind: 'keyValue',
 						description: 'Your own values, sent back in the mail.sent and mail.failed webhooks',
